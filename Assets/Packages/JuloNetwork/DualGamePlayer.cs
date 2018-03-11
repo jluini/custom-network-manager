@@ -42,23 +42,18 @@ namespace Julo.Network
                 if(manager.mainPlayer == null)
                 {
                     manager.mainPlayer = this;
-                    Debug.Log("Setting client main player");
                 }
                 else
                 {
                     Debug.LogWarning("Already a remote main player here");
                 }
             }
-            else
-            {
-                Debug.Log("Is server");
-            }
         }
 
         public override void OnStartClient()
         {
             DualNetworkManager manager = (DualNetworkManager)NetworkManager.singleton;
-            Debug.Log("Starting player client");
+            //Debug.Log("Starting player client");
 
             manager.OnClientPlayerAdded(this);
         }
@@ -71,7 +66,7 @@ namespace Julo.Network
             // don't call this if the client is not setup (will call OnStartClient and then OnClienPlayerAdded)
             if(isClient)
             {
-                Debug.LogFormat("Role changed {0} -> {1}", oldRole, newRole);
+                //Debug.LogFormat("Role changed {0} -> {1}", oldRole, newRole);
                 manager.OnClientRoleChanged(this, oldRole);
             }
             else

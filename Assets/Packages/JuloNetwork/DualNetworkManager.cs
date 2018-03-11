@@ -198,20 +198,7 @@ namespace Julo.Network
 
             playerMap.Add(role2, player1);
             playerMap.Add(role1, player2);
-
-            //roleA = role1;
-            //roleB = role2;
-            //StartCoroutine("SwitchTheRoles");
         }
-
-        /*int roleA, roleB;
-        private IEnumerator SwitchTheRoles()
-        {
-            playerMap[roleA].player.role = roleA;
-            yield return new WaitForSeconds(3f);
-            playerMap[roleB].player.role = roleB;
-            yield break;
-        }*/
 
         /********** MAIN CALLBACKS **********/
 
@@ -222,7 +209,7 @@ namespace Julo.Network
         /*
         public override void OnStartClient()
         {
-            clientPlayerMap = new Dictionary<int, DualGamePlayer>();
+            //
         }
         */
         public override void OnStopServer()
@@ -277,46 +264,6 @@ namespace Julo.Network
 
             NetworkServer.DestroyPlayersForConnection(connectionToClient);
         }
-
-        /*
-        public override void OnServerDisconnect(NetworkConnection connectionToClient)
-        {
-            //SetServerInfo("Offline", "");
-            //JuloDebug.Log("Destroying player!!! TODO");
-            //JuloDebug.Log("Dual::OnServerDisconnect");
-            // TODO should eliminate from players list
-            /*
-            foreach(PlayerController pc in connectionToClient.playerControllers)
-            {
-                if(pc.gameObject != pc.unetView.gameObject)
-                    Debug.Log("Es rarísimo esto");
-
-                Debug.Log(string.Format("Destroying({0})", pc.gameObject));
-
-                NetworkServer.Destroy(pc.gameObject);
-                Destroy(pc.gameObject);
-            }
-
-            int numControllers = connectionToClient.playerControllers.Count;
-            if(numControllers == 0)
-            {
-                Debug.LogWarning("Connection with zero players");
-            }
-
-            foreach(PlayerController player in connectionToClient.playerControllers)
-            {
-                if(player.IsValid && player.unetView != null && player.gameObject != null)
-                {
-                    RemovePlayerFromList(connectionToClient.connectionId, player.playerControllerId, player.unetView.netId);
-                }
-                else
-                {
-                    Debug.LogWarning(string.Format("Not valid {0}/{1}/{2}", player.IsValid, player.unetView, player.gameObject));
-                }
-            }
-            NetworkServer.DestroyPlayersForConnection(connectionToClient);
-        }
-        */
 
         // called on server when a client is ready
         public override void OnServerReady(NetworkConnection connectionToClient)
@@ -406,14 +353,6 @@ namespace Julo.Network
             //JuloDebug.Log(string.Format("OnSeverRemovePlayer({0}, {1})", connectionToClient.connectionId, player.playerControllerId));
 
             NetworkServer.Destroy(player.gameObject);
-
-            /*PlayerController player;
-            if(connectionToClient.GetPlayer(playerControllerId, out player))
-            {
-                if(player.NetworkIdentity != null && player.NetworkIdentity.gameObject != null)
-                    NetworkServer.Destroy(player.NetworkIdentity.gameObject);
-            }
-            */
         }
 
         // called on server when an error occurs
@@ -427,16 +366,13 @@ namespace Julo.Network
         // called on client when connected to a server
         public override void OnClientConnect(NetworkConnection connectionToServer)
         {
+            OnClientConnected();
             bool isLocalClient = NetworkServer.active;
 
             if(isLocalClient)
             {
                 //JuloDebug.Log("OnClientConnect: local");
-                //ClientScene.Ready(connectionToServer); // TODO is ready ??
-
                 // add hosted players
-
-                //NetworkConnection localConnection = client.connection;
                 for(int i = 0; i < cachedLocalPlayers.Count; i++)
                 {
                     ClientScene.AddPlayer(connectionToServer, (short)i);
@@ -486,28 +422,12 @@ namespace Julo.Network
 
         public void OnClientPlayerAdded(DualGamePlayer player)
         {
-            /*
-            if(clientPlayerMap.ContainsKey(player.role))
-            {
-                Debug.LogErrorFormat("Client: already contains player with role {0}", player.role);
-            }
-            clientPlayerMap.Add(player.role, player);
-            */
-
             if(dualClient != null)
                 dualClient.OnPlayerAdded(player);
         }
 
         public void OnClientPlayerRemoved(DualGamePlayer player)
         {
-            /*
-            if(!clientPlayerMap.ContainsKey(player.role))
-            {
-                Debug.LogErrorFormat("Client: removed player not found");
-            }
-            clientPlayerMap.Remove(player.role);
-            */
-
             if(dualClient != null)
                 dualClient.OnPlayerRemoved(player);
         }
@@ -522,8 +442,7 @@ namespace Julo.Network
 
         /*********** Methods to override ***********/
 
-        protected virtual void OnRoleChanged(DualGamePlayer player, int oldRole, int newRole) { }
-        protected virtual void OnRoleExited(DualGamePlayer player, int oldRole) { }
+        protected virtual void OnClientConnected() { }
 
         protected virtual DualGamePlayer CreatePlayer(int connectionId, short playerControllerId)
         {

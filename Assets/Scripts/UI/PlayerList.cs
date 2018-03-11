@@ -35,7 +35,7 @@ namespace Julo.CNMProto
 
             int childCount = playerContainer.childCount;
 
-            if(childCount != 1)
+            if(childCount != 1) // || separator != playerContainer.GetChild(0))
             {
                 Debug.LogError("Invalid start");
             }
@@ -84,8 +84,16 @@ namespace Julo.CNMProto
             { // is spectator
                 bool added = false;
 
-                if(playerContainer.GetChild(separator.GetSiblingIndex()) != separator)
-                    Debug.LogError("Wrong 2");
+                if(separator == null)
+                {
+                    Debug.LogError("No separator");
+                    return;
+                }
+                else if(playerContainer == null)
+                {
+                    Debug.LogError("No player container");
+                    return;
+                }
 
                 for(int i = separator.GetSiblingIndex() + 1; i < playerContainer.childCount; i++)
                 {
@@ -143,7 +151,7 @@ namespace Julo.CNMProto
             int newRole = player.role;
             if(oldRole == newRole)
             {
-                Debug.LogWarning("It didn't change!");
+                //Debug.LogWarning("It didn't change!");
                 return;
             }
 
@@ -169,10 +177,6 @@ namespace Julo.CNMProto
                         {
                             Debug.Log("Breaking here");
                             break;
-                        }
-                        else
-                        {
-                            Debug.LogFormat("p.role ({0}) < ({1}) oldRole", p.role, oldRole);
                         }*/
                     }
                 }
@@ -200,14 +204,14 @@ namespace Julo.CNMProto
 
         private void ShowWildcard(int index)
         {
-            if(wildcards[index].gameObject.activeSelf)
-                Debug.LogWarningFormat("Wildcard {0} already shown", index);
+            //if(wildcards[index].gameObject.activeSelf)
+            //    Debug.LogWarningFormat("Wildcard {0} already shown", index);
             wildcards[index].gameObject.SetActive(true);
         }
         private void ReplaceWildcard(int index, Transform with)
         {
-            if(!wildcards[index].gameObject.activeSelf)
-                Debug.LogWarningFormat("Wildcard {0} already hidden", index);
+            //if(!wildcards[index].gameObject.activeSelf)
+            //    Debug.LogWarningFormat("Wildcard {0} already hidden", index);
             //else
             //    Debug.LogWarningFormat("Wildcard {0} not hidden, hiding", index);
             wildcards[index].gameObject.SetActive(false);

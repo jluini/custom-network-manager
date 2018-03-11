@@ -143,7 +143,18 @@ namespace Julo.CNMProto
             nameInput.text = name;
             nameInput.interactable = isLocalPlayer;
             colorInput.interactable = isLocalPlayer;
-            roleDisplay.text = role.ToString();
+
+            string roleText;
+            if(role < CNManager.Instance.maxPlayers)
+            {
+                roleText = "p" + (role + 1);
+            }
+            else
+            {
+                roleText = "o.o";
+            }
+
+            roleDisplay.text = roleText;
 
             if(coloredImage)
                 coloredImage.color = color;

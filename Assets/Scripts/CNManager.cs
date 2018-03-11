@@ -36,8 +36,12 @@ namespace Julo.CNMProto
 
         public PlayerList playerList;
 
-        public PlayButton    playButton;
+        public VisibilityToggling serverOptions;
+        public Button playButton;
+        public Toggle joinAsSpectatorToggle;
+
         public MainMenuPanel mainMenuPanel;
+        public VisibilityToggling gamePanel;
         public LobbyPanel    lobbyPanel;
 
         [Header("Icons")]
@@ -171,12 +175,14 @@ namespace Julo.CNMProto
 
             bool isHostedClient = NetworkServer.active;
 
-            if(!isHostedClient)
+            if(isHostedClient)
+            {
+                SwitchToLobbyMode();
+            }
+            else
             {
                 backDelegate = this.StopClient;
             }
-
-            SwitchToLobbyMode();
         }
 
         public void OnClientNewMessage(string message)
@@ -184,32 +190,24 @@ namespace Julo.CNMProto
             chatContent.text = chatContent.text + message + "\n";
         }
 
+        protected override void OnClientConnected()
+        {
+            if(!NetworkServer.active)
+            {
+                SwitchToLobbyMode();
+            }
+        }
+
 
         /********** UI **********/
-        /*
-        public void DrawLeft(CNMPlayer player) {
-            DrawPlayer(leftPlayerDisplay, player);
-        }
-        public void DrawRight(CNMPlayer player) {
-            DrawPlayer(rightPlayerDisplay, player);
-        }
-        private void DrawPlayer(PlayerDisplay display, CNMPlayer player) {
-            if(player.debugging) JuloDebug.Log(string.Format("DrawPlayer({0})", player.playerName));
-            
-            display.DisplayPlayer(player);
-        }
-        */
+
         private void SwitchToMenuMode()
         {
             mainMenuPanel.Show();
             lobbyPanel.Hide();
+            gamePanel.Hide();
 
             backButton.gameObject.SetActive(false);
-            if(playButton.isVisible)
-                playButton.Hide();
-
-            //leftPlayerDisplay.Hide();
-            //rightPlayerDisplay.Hide();
         }
 
         private void SwitchToLobbyMode()
@@ -218,16 +216,10 @@ namespace Julo.CNMProto
 
             mainMenuPanel.Hide();
             lobbyPanel.Show();
+            gamePanel.Show();
 
-            if(NetworkServer.active)
-                playButton.Show();
-            /*
-            leftPlayerDisplay.DisplayPlayer(null);
-            rightPlayerDisplay.DisplayPlayer(null);
-
-            leftPlayerDisplay.Show();
-            rightPlayerDisplay.Show();
-            */
+            joinAsSpectatorToggle.interactable = NetworkServer.active;
+            playButton.interactable = NetworkServer.active;
         }
 
         /********** internal **********/
@@ -251,16 +243,6 @@ namespace Julo.CNMProto
         
         /********* overriden from DualNetworkManager *********/
 
-        protected override void OnRoleChanged(DualGamePlayer playerObj, int oldRole, int newRole)
-        {
-            // TODO implement
-        }
-
-        protected override void OnRoleExited(DualGamePlayer player, int oldRole)
-        {
-            // TODO implement
-        }
-        
         protected override DualGamePlayer CreatePlayer(int connectionId, short playerControllerId)
         {
             bool isLocal = (connectionId == 0);

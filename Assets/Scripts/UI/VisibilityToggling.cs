@@ -31,8 +31,8 @@ public class VisibilityToggling : MonoBehaviour
         }
     }
 
-    protected virtual void DoShow() { }
-    protected virtual void DoHide() { }
+    protected virtual void DoShow() { gameObject.SetActive(true); }
+    protected virtual void DoHide() { gameObject.SetActive(false); }
 
 }
 
