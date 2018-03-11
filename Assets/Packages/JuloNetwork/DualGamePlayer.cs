@@ -20,11 +20,6 @@ namespace Julo.Network
 
         [SyncVar(hook="OnRoleChanged")]
         public int role= -1;
-        
-        public bool IsSpectator()
-        {
-            return role == -1;
-        }
 
         private DualNetworkManager manager {
             get {

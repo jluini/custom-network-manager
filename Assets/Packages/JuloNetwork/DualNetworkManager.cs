@@ -406,18 +406,7 @@ namespace Julo.Network
         {
             Debug.LogWarning("OnClientNotReady");
         }
-        /*
-        public void OnClientRoleChanged(DualGamePlayer player, int oldRole, int newRole)
-        {
-            //Debug.LogFormat("I'm client, player {0} change {1} -> {2}", player.netId, oldRole, newRole);
-            OnRoleChanged(player, oldRole, newRole);
-        }
 
-        public void OnClientRoleExited(DualGamePlayer player, int oldRole)
-        {
-            OnRoleExited(player, oldRole);
-        }
-        */
         /*********** DUAL CLIENT METHODS ***********/
 
         public void OnClientPlayerAdded(DualGamePlayer player)
