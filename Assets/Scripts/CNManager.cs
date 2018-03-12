@@ -63,7 +63,6 @@ namespace Julo.CNMProto
         {
             SetServerInfo("Off", "");
             backButton.gameObject.SetActive(false);
-            //StartCoroutine("ShowInfo");
         }
 
 
@@ -91,20 +90,6 @@ namespace Julo.CNMProto
 
         /********** button handlers **********/
 
-        public void OnClickBack()
-        {
-            if(backDelegate != null)
-            {
-                backDelegate();
-                backDelegate = null; // TODO right ?
-                //isInGame = false
-            }
-            else
-            {
-                JuloDebug.Warn("No back callback");
-            }
-        }
-
         public void OnClickVersus()
         {
             CNMPlayer p1 = NewPlayer(mainPlayerModel);
@@ -113,7 +98,11 @@ namespace Julo.CNMProto
             AddHostedPlayer(p1);
             AddHostedPlayer(p2);
 
-            StartAsHost();
+            if(!StartAsHost())
+            {
+                Destroy(p1.gameObject);
+                Destroy(p2.gameObject);
+            }
         }
 
         public void OnClickVersusCpu()
@@ -124,23 +113,41 @@ namespace Julo.CNMProto
             AddHostedPlayer(p1);
             AddHostedPlayer(cpu);
             
-            StartAsHost();
+            if(!StartAsHost())
+            {
+                Destroy(p1.gameObject);
+                Destroy(cpu.gameObject);
+            }
         }
 
         public void OnClickHost()
         {
             CNMPlayer p1 = NewPlayer(mainPlayerModel);
             AddHostedPlayer(p1);
-            
-            StartAsHost();
-        }
 
+            if(!StartAsHost())
+            {
+                Destroy(p1.gameObject);
+            }
+        }
 
         public void OnClickJoin()
         {
             StartAsClient();
             SwitchToConnectingMode();
-            //backDelegate = this.StopClient;
+        }
+        
+        public void OnClickBack()
+        {
+            if(backDelegate != null)
+            {
+                backDelegate();
+                backDelegate = null; // TODO right ?
+            }
+            else
+            {
+                JuloDebug.Warn("No back callback");
+            }
         }
         
         public void OnClickPlay()
@@ -150,7 +157,17 @@ namespace Julo.CNMProto
             // ...
         }
 
-        /******** Overriden ********/
+        /******** Client listening ********/
+        
+        protected override void OnClientConnected(bool isHost)
+        {
+            SwitchToLobbyMode();
+        }
+        
+        protected override void OnClientDisconnected()
+        {
+            SwitchToMenuMode();
+        }
 
         public override void OnPlayerAdded(DualGamePlayer newPlayer)
         {
@@ -167,18 +184,6 @@ namespace Julo.CNMProto
         public override void OnRoomSizeChanged(int minPlayers, int maxPlayers)
         {
             playerList.OnRoomSizeChanged(minPlayers, maxPlayers);
-        }
-        
-        protected override void OnClientConnected(bool isHost)
-        {
-            SwitchToLobbyMode();
-        }
-
-        protected override void OnClientDisconnected()
-        {
-            //bool isHostedClient = NetworkServer.active;
-            //if(!isHostedClient)
-            SwitchToMenuMode();
         }
 
         /***************************/
@@ -225,7 +230,6 @@ namespace Julo.CNMProto
             connectingPanel.Show();
         }
 
-
         /********** internal **********/
 
         private CNMPlayer NewPlayer()
@@ -234,7 +238,6 @@ namespace Julo.CNMProto
             return playerObj.GetComponent<CNMPlayer>();
         }
         
-        //private CNMPlayer NewPlayer(string name, PlayerType playerType, ushort colorNum)
         private CNMPlayer NewPlayer(PlayerData model)
         {
             CNMPlayer ret = NewPlayer();

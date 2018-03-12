@@ -40,20 +40,34 @@ namespace Julo.Network
 
         /************* DUAL METHODS *************/
 
-        public void StartAsHost()
+        public bool StartAsHost()
         {
             if(state != DNMState.Off)
             {
                 Debug.Log("Invalid call of StartAsHost");
-                return;
+                return false;
             }
 
             if(cachedLocalPlayers.Count == 0)
                 Debug.LogWarning("Hosting with no local players");
 
             playerMap = new Dictionary<int, PlayerWrapper>();
-            state = DNMState.Hosting;
-            StartHost();
+                
+            NetworkClient localClient = StartHost();
+
+            bool hostStarted = localClient != null;
+
+            if(hostStarted)
+            {
+                state = DNMState.Hosting;
+                SetServerInfo("Hosting", networkAddress);
+            }
+            else
+            {
+                cachedLocalPlayers.Clear();
+            }
+
+            return hostStarted;
         }
 
         public void StartAsClient()
@@ -65,6 +79,7 @@ namespace Julo.Network
             }
 
             state = DNMState.Connecting;
+            SetServerInfo("Connecting", "");
             StartClient();
         }
 
@@ -95,7 +110,7 @@ namespace Julo.Network
                 state = DNMState.Off;
                 this.cachedLocalPlayers.Clear();
             }
-            else if(state == DNMState.Client || state == DNMState.Connecting)
+            else if(state == DNMState.Connecting || state == DNMState.Client)
             {
                 this.StopClient();
                 state = DNMState.Off;
@@ -228,20 +243,16 @@ namespace Julo.Network
 
         /********** MAIN CALLBACKS **********/
 
-        public override void OnStartServer()
-        {
-            SetServerInfo("Hosting", networkAddress);
-        }
-
         public override void OnStartClient(NetworkClient client)
         {
-            // Debug.Log("--- DualNetworkManager::OnStartClient()");
+            
         }
 
         public override void OnStopServer()
         {
+            // Debug.Log("--- DualNetworkManager::OnStopServer()");
             // TODO cleanup something?
-            SetServerInfo("Offline", "");
+            SetServerInfo("Off", "");
         }
 
         public override void OnStopClient()
@@ -399,6 +410,7 @@ namespace Julo.Network
             if(isLocalClient)
             {
                 if(state != DNMState.Hosting) { Debug.LogError("Invalid state"); }
+
                 // add hosted players
                 for(int i = 0; i < cachedLocalPlayers.Count; i++)
                 {
@@ -411,6 +423,7 @@ namespace Julo.Network
             {
                 if(state != DNMState.Connecting) { Debug.LogError("Invalid state"); }
                 state = DNMState.Client;
+                SetServerInfo("Client", "");
 
                 ClientScene.Ready(connectionToServer); // TODO is ready ??
 
