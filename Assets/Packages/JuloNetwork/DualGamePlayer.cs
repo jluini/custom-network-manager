@@ -50,7 +50,7 @@ namespace Julo.Network
             DualNetworkManager manager = (DualNetworkManager)NetworkManager.singleton;
             //Debug.Log("Starting player client");
 
-            manager.OnClientPlayerAdded(this);
+            manager.OnPlayerAdded(this);
         }
 
         private void OnRoleChanged(int newRole)
@@ -62,7 +62,7 @@ namespace Julo.Network
             if(isClient)
             {
                 //Debug.LogFormat("Role changed {0} -> {1}", oldRole, newRole);
-                manager.OnClientRoleChanged(this, oldRole);
+                manager.OnRoleChanged(this, oldRole);
             }
             else
             {
@@ -82,7 +82,11 @@ namespace Julo.Network
 
             if(role >= 0)
             {
-                manager.OnClientPlayerRemoved(this);
+                manager.OnPlayerRemoved(this);
+            }
+            else
+            {
+                Debug.LogWarning("No role");
             }
         }
     }

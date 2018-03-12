@@ -3,13 +3,13 @@ using System.Collections;
 
 namespace Julo.Network
 {
-    public abstract class DualClient : MonoBehaviour
+    public interface DualClient
     {
-
-        public abstract void OnPlayerAdded(DualGamePlayer newPlayer);
-        public abstract void OnPlayerRemoved(DualGamePlayer player);
-        public abstract void OnRoleChanged(DualGamePlayer player, int oldRole);
-        public abstract void OnRoomSizeChanged(int newSize);
+        
+        void OnPlayerAdded(DualGamePlayer newPlayer);
+        void OnPlayerRemoved(DualGamePlayer player);
+        void OnRoleChanged(DualGamePlayer player, int oldRole);
+        void OnRoomSizeChanged(int minPlayers, int maxPlayers);
 
     }
 }

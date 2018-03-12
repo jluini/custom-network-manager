@@ -137,9 +137,6 @@ namespace Julo.CNMProto
                 icon = CNManager.Instance.remoteIcon;
             }
 
-            //if(nameDisplay)
-            //    nameDisplay.text = name;
-
             nameInput.text = name;
             nameInput.interactable = isLocalPlayer;
             colorInput.interactable = isLocalPlayer;

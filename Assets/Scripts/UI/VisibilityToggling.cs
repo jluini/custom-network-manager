@@ -13,10 +13,6 @@ public class VisibilityToggling : MonoBehaviour
             isVisible = true;
             DoShow();
         }
-        else
-        {
-            Debug.LogWarning("Already shown");
-        }
     }
 
     public void Hide() {
@@ -24,10 +20,6 @@ public class VisibilityToggling : MonoBehaviour
         {
             isVisible = false;
             DoHide();
-        }
-        else
-        {
-            Debug.LogWarning("Already hidden");
         }
     }
 

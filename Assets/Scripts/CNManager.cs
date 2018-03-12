@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
+using UnityEngine.EventSystems;
 
 using UnityEngine.SceneManagement;
 
@@ -25,10 +26,10 @@ namespace Julo.CNMProto
 
         public string playSceneName;
 
-        public ushort defaultPlayerOneColor = 0;
-        public ushort defaultPlayerTwoColor = 1;
-        public ushort defaultPlayerCpuColor = 2;
-        public ushort defaultPlayerRemoteColor = 3;
+        public PlayerData mainPlayerModel;
+        public PlayerData secondaryPlayerModel;
+        public PlayerData cpuPlayerModel;
+        public PlayerData remotePlayerModel;
 
         [Header("Hooks")]
 
@@ -43,6 +44,7 @@ namespace Julo.CNMProto
         public MainMenuPanel mainMenuPanel;
         public VisibilityToggling gamePanel;
         public LobbyPanel    lobbyPanel;
+        public VisibilityToggling connectingPanel;
 
         [Header("Icons")]
         public Sprite nullIcon;
@@ -78,6 +80,7 @@ namespace Julo.CNMProto
 
         private void OnGUI()
         {
+            
             if(Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.KeypadEnter))
             {
                 if(chatInput.isFocused && chatInput.text != "") {
@@ -104,38 +107,40 @@ namespace Julo.CNMProto
 
         public void OnClickVersus()
         {
-            StartAsHost();
-
-            CNMPlayer p1 = NewPlayer("Player1", PlayerType.KeyboardPlayer, defaultPlayerOneColor);
-            CNMPlayer p2 = NewPlayer("Player2", PlayerType.KeyboardPlayer, defaultPlayerTwoColor);
+            CNMPlayer p1 = NewPlayer(mainPlayerModel);
+            CNMPlayer p2 = NewPlayer(secondaryPlayerModel);
 
             AddHostedPlayer(p1);
             AddHostedPlayer(p2);
+
+            StartAsHost();
         }
 
         public void OnClickVersusCpu()
         {
-            StartAsHost();
-
-            CNMPlayer p1 = NewPlayer("Player1", PlayerType.KeyboardPlayer, defaultPlayerOneColor);
-            CNMPlayer p2 = NewPlayer("CPU", PlayerType.CpuPlayer, defaultPlayerCpuColor);
+            CNMPlayer p1 = NewPlayer(mainPlayerModel);
+            CNMPlayer cpu = NewPlayer(cpuPlayerModel);
 
             AddHostedPlayer(p1);
-            AddHostedPlayer(p2);
+            AddHostedPlayer(cpu);
+            
+            StartAsHost();
         }
 
         public void OnClickHost()
         {
-            StartAsHost();
-
-            CNMPlayer p1 = NewPlayer("Player1", PlayerType.KeyboardPlayer, defaultPlayerOneColor);
+            CNMPlayer p1 = NewPlayer(mainPlayerModel);
             AddHostedPlayer(p1);
+            
+            StartAsHost();
         }
 
 
         public void OnClickJoin()
         {
             StartAsClient();
+            SwitchToConnectingMode();
+            //backDelegate = this.StopClient;
         }
         
         public void OnClickPlay()
@@ -144,83 +149,82 @@ namespace Julo.CNMProto
             
             // ...
         }
-        
-        public override void OnStopHost()
-        {
-            base.OnStopHost();
-            //SwitchToMenuMode();
-        }
-        public override void OnStopClient()
-        {
-            bool isHostedClient = NetworkServer.active;
-            JuloDebug.Log(string.Format("GameManager::OnStopClient ({0})", isHostedClient ? "server here" : "remote"));
-            base.OnStopClient();
 
+        /******** Overriden ********/
+
+        public override void OnPlayerAdded(DualGamePlayer newPlayer)
+        {
+            playerList.OnPlayerAdded(newPlayer);
+        }
+        public override void OnPlayerRemoved(DualGamePlayer player)
+        {
+            playerList.OnPlayerRemoved(player);
+        }
+        public override void OnRoleChanged(DualGamePlayer player, int oldRole)
+        {
+            playerList.OnRoleChanged(player, oldRole);
+        }
+        public override void OnRoomSizeChanged(int minPlayers, int maxPlayers)
+        {
+            playerList.OnRoomSizeChanged(minPlayers, maxPlayers);
+        }
+        
+        protected override void OnClientConnected(bool isHost)
+        {
+            SwitchToLobbyMode();
+        }
+
+        protected override void OnClientDisconnected()
+        {
+            //bool isHostedClient = NetworkServer.active;
             //if(!isHostedClient)
             SwitchToMenuMode();
         }
 
-        public override void OnStartHost()
-        {
-            base.OnStartHost();
-
-            //JuloDebug.Log(string.Format("GameManager::OnStartHost"));
-
-            backDelegate = this.StopHost;
-        }
-
-        public override void OnStartClient(NetworkClient client)
-        {
-            base.OnStartClient(client);
-
-            bool isHostedClient = NetworkServer.active;
-
-            if(isHostedClient)
-            {
-                SwitchToLobbyMode();
-            }
-            else
-            {
-                backDelegate = this.StopClient;
-            }
-        }
+        /***************************/
 
         public void OnClientNewMessage(string message)
         {
             chatContent.text = chatContent.text + message + "\n";
         }
-
-        protected override void OnClientConnected()
-        {
-            if(!NetworkServer.active)
-            {
-                SwitchToLobbyMode();
-            }
-        }
-
-
+        
         /********** UI **********/
 
         private void SwitchToMenuMode()
         {
+            backButton.gameObject.SetActive(false);
+            
             mainMenuPanel.Show();
             lobbyPanel.Hide();
             gamePanel.Hide();
-
-            backButton.gameObject.SetActive(false);
+            connectingPanel.Hide();
         }
 
         private void SwitchToLobbyMode()
         {
             backButton.gameObject.SetActive(true);
+            backDelegate = this.Stop;
 
             mainMenuPanel.Hide();
             lobbyPanel.Show();
             gamePanel.Show();
+            connectingPanel.Hide();
 
             joinAsSpectatorToggle.interactable = NetworkServer.active;
             playButton.interactable = NetworkServer.active;
         }
+
+        private void SwitchToConnectingMode()
+        {
+            backButton.gameObject.SetActive(true);
+            backDelegate = this.Stop;
+
+            mainMenuPanel.Hide();
+            gamePanel.Hide();
+            lobbyPanel.Hide();
+            connectingPanel.Show();
+        }
+
 
         /********** internal **********/
 
@@ -230,13 +234,14 @@ namespace Julo.CNMProto
             return playerObj.GetComponent<CNMPlayer>();
         }
         
-        private CNMPlayer NewPlayer(string name, PlayerType playerType, ushort colorNum)
+        //private CNMPlayer NewPlayer(string name, PlayerType playerType, ushort colorNum)
+        private CNMPlayer NewPlayer(PlayerData model)
         {
             CNMPlayer ret = NewPlayer();
 
-            ret.playerName = name;
-            ret.playerType = playerType;
-            ret.playerColorNum = colorNum;
+            ret.playerName = model.playerName;
+            ret.playerType = model.playerType;
+            ret.playerColorNum = model.playerColorNumber;
             
             return ret;
         }
@@ -254,7 +259,7 @@ namespace Julo.CNMProto
             }
             else
             {
-                player = NewPlayer("Remote", PlayerType.KeyboardPlayer, defaultPlayerRemoteColor);
+                player = NewPlayer(remotePlayerModel);
             }
 
             return player;

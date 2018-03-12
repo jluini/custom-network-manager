@@ -9,7 +9,7 @@ using Julo.Network;
 
 namespace Julo.CNMProto
 {
-    public class PlayerList : DualClient
+    public class PlayerList : MonoBehaviour, DualClient
     {
         public Transform wildcardPrefab;
 
@@ -27,8 +27,15 @@ namespace Julo.CNMProto
         //private Dictionary<int, CNMPlayer> playerMap;
 
         private Transform separator;
+        private bool initialized = false;
 
         void Start()
+        {
+            if(!initialized)
+                initialize();
+        }
+
+        void initialize()
         {
             minPlayers = CNManager.Instance.minPlayers;
             maxPlayers = CNManager.Instance.maxPlayers;
@@ -41,6 +48,7 @@ namespace Julo.CNMProto
             }
 
             separator = playerContainer.GetChild(0);
+            initialized = true;
 
             wildcards = new List<Transform>();
 
@@ -54,10 +62,13 @@ namespace Julo.CNMProto
                 wildcards.Add(wildcard);
             }
             separator.SetAsLastSibling();
+            initialized = true;
         }
 
-        public override void OnPlayerAdded(DualGamePlayer player)
+        public void OnPlayerAdded(DualGamePlayer player)
         {
+            if(!initialized)
+                initialize();
             // Debug.LogFormat("Adding in client player with role {0}", player.role);
 
             AddPlayerToList(player);
@@ -123,7 +134,7 @@ namespace Julo.CNMProto
             }
         }
 
-        public override void OnPlayerRemoved(DualGamePlayer player)
+        public void OnPlayerRemoved(DualGamePlayer player)
         {
             if(player.role < 0)
             {
@@ -146,7 +157,7 @@ namespace Julo.CNMProto
             RedrawMoveButtons();
         }
 
-        public override void OnRoleChanged(DualGamePlayer player, int oldRole)
+        public void OnRoleChanged(DualGamePlayer player, int oldRole)
         {
             int newRole = player.role;
             if(oldRole == newRole)
@@ -197,7 +208,7 @@ namespace Julo.CNMProto
             RedrawMoveButtons();
         }
 
-        public override void OnRoomSizeChanged(int newSize)
+        public void OnRoomSizeChanged(int minPlayers, int maxPlayers)
         {
             Debug.LogError("Not implemented");
         }

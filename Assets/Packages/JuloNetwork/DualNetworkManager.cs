@@ -11,7 +11,7 @@ using Julo.Util;
 
 namespace Julo.Network
 {
-    public class DualNetworkManager : NetworkManager
+    public class DualNetworkManager : NetworkManager, DualClient
     {
         [Header("DualNetworkManager")]
 
@@ -21,20 +21,19 @@ namespace Julo.Network
         public DualGamePlayer mainPlayer = null;
         public bool joinAsSpectator = false;
 
-        public DualClient dualClient;
-
         [Header("Debug Info")]
         public bool debugEnabled;
         public Text statusInfo;
         public Text hostInfo;
 
-        private enum HostType { None, Host, Client }
-        private HostType hostType = HostType.None;
+        private enum DNMState { Off, Hosting, Connecting, Client }
+        private DNMState state = DNMState.Off;
+        private List<DualGamePlayer> cachedLocalPlayers = new List<DualGamePlayer>();
+
         
         /*** SERVER ***/
         private int maximumSpectatorRole = 100;
         private Dictionary<int, PlayerWrapper> playerMap;
-        private List<DualGamePlayer> cachedLocalPlayers;
 
 
         /*** CLIENT ***/
@@ -43,29 +42,38 @@ namespace Julo.Network
 
         public void StartAsHost()
         {
-            //NetworkServer.RegisterHandler(MsgType.Connect, OnConnected);
+            if(state != DNMState.Off)
+            {
+                Debug.Log("Invalid call of StartAsHost");
+                return;
+            }
 
-            //Debug.LogFormat("Starting host for {0} game player", maxPlayers);
-            hostType = HostType.Host;
+            if(cachedLocalPlayers.Count == 0)
+                Debug.LogWarning("Hosting with no local players");
 
-            cachedLocalPlayers = new List<DualGamePlayer>();
             playerMap = new Dictionary<int, PlayerWrapper>();
-
+            state = DNMState.Hosting;
             StartHost();
         }
 
         public void StartAsClient()
         {
-            hostType = HostType.Client;
+            if(state != DNMState.Off)
+            {
+                Debug.LogError("Invalid state");
+                return;
+            }
+
+            state = DNMState.Connecting;
             StartClient();
         }
 
         // called on server to add already created local players
         public void AddHostedPlayer(/*short playerControllerId, */DualGamePlayer player)
         {
-            if(hostType != HostType.Host)
+            if(state != DNMState.Off)
             {
-                Debug.LogError("Cannot add hosted player in client mode");
+                Debug.LogError("Invalid state");
                 return;
             }
 
@@ -79,6 +87,24 @@ namespace Julo.Network
             cachedLocalPlayers.Add(player);
         }
 
+        public void Stop()
+        {
+            if(state == DNMState.Hosting)
+            {
+                this.StopHost();
+                state = DNMState.Off;
+                this.cachedLocalPlayers.Clear();
+            }
+            else if(state == DNMState.Client || state == DNMState.Connecting)
+            {
+                this.StopClient();
+                state = DNMState.Off;
+            }
+            else
+            {
+                Debug.LogError("Invalid state");
+            }
+        }
         // up one place
         public void PlayerUp(DualGamePlayer player)
         {
@@ -206,26 +232,28 @@ namespace Julo.Network
         {
             SetServerInfo("Hosting", networkAddress);
         }
-        /*
-        public override void OnStartClient()
+
+        public override void OnStartClient(NetworkClient client)
         {
-            //
+            // Debug.Log("--- DualNetworkManager::OnStartClient()");
         }
-        */
+
         public override void OnStopServer()
         {
             // TODO cleanup something?
             SetServerInfo("Offline", "");
         }
 
+        public override void OnStopClient()
+        {
+            state = DNMState.Off;
+            this.cachedLocalPlayers.Clear();
+
+            OnClientDisconnected();
+        }
+
         /************* SERVER CALLBACKS *************/
         
-        /*// called on server when a client just connected
-        public override void OnServerConnect(NetworkConnection connectionToClient)
-        {
-            // WARNING: called two times (at least for local client)
-        }*/
-
         // called on server when a client disconnected
         public override void OnServerDisconnect(NetworkConnection connectionToClient)
         {
@@ -366,25 +394,30 @@ namespace Julo.Network
         // called on client when connected to a server
         public override void OnClientConnect(NetworkConnection connectionToServer)
         {
-            OnClientConnected();
             bool isLocalClient = NetworkServer.active;
 
             if(isLocalClient)
             {
-                //JuloDebug.Log("OnClientConnect: local");
+                if(state != DNMState.Hosting) { Debug.LogError("Invalid state"); }
                 // add hosted players
                 for(int i = 0; i < cachedLocalPlayers.Count; i++)
                 {
                     ClientScene.AddPlayer(connectionToServer, (short)i);
                 }
+
+                OnClientConnected(true);
             }
             else
             {
-                //JuloDebug.Log("OnClientConnect: remote");
+                if(state != DNMState.Connecting) { Debug.LogError("Invalid state"); }
+                state = DNMState.Client;
+
                 ClientScene.Ready(connectionToServer); // TODO is ready ??
 
                 // ask the server to add player for this remote client
                 ClientScene.AddPlayer(connectionToServer, 0);
+
+                OnClientConnected(false);
             }
         }
 
@@ -409,29 +442,13 @@ namespace Julo.Network
 
         /*********** DUAL CLIENT METHODS ***********/
 
-        public void OnClientPlayerAdded(DualGamePlayer player)
-        {
-            if(dualClient != null)
-                dualClient.OnPlayerAdded(player);
-        }
+        public virtual void OnPlayerAdded(DualGamePlayer player) { }
+        public virtual void OnPlayerRemoved(DualGamePlayer player) { }
+        public virtual void OnRoleChanged(DualGamePlayer player, int oldRole) { }
+        public virtual void OnRoomSizeChanged(int minPlayers, int maxPlayers) { }
 
-        public void OnClientPlayerRemoved(DualGamePlayer player)
-        {
-            if(dualClient != null)
-                dualClient.OnPlayerRemoved(player);
-        }
-
-        public void OnClientRoleChanged(DualGamePlayer player, int oldRole)
-        {
-            if(dualClient != null)
-                dualClient.OnRoleChanged(player, oldRole);
-        }
-
-        /**********************/
-
-        /*********** Methods to override ***********/
-
-        protected virtual void OnClientConnected() { }
+        protected virtual void OnClientConnected(bool isHost) { }
+        protected virtual void OnClientDisconnected() { }
 
         protected virtual DualGamePlayer CreatePlayer(int connectionId, short playerControllerId)
         {
