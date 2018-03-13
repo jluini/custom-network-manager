@@ -139,7 +139,7 @@ namespace Julo.CNMProto
 
             foreach(Unit unit in units)
             {
-                if(unit.playerId == this.role/* TODO && .unitNumber == unitNumber*/)
+                if(unit.playerNetId == this.netId/* TODO && .unitNumber == unitNumber*/)
                 {
                     currentUnit = unit;
                     found = true;

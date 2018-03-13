@@ -324,7 +324,8 @@ namespace Julo.CNMProto
             units.Add(newUnit);
             numberOfUnitsPerPlayer[owner.role]++;
 
-            newUnit.playerId = owner.role;
+            newUnit.playerNetId = owner.netId;
+            newUnit.playerRole  = owner.role;
             
             NetworkServer.Spawn(newUnit.gameObject);
         }
@@ -395,7 +396,7 @@ namespace Julo.CNMProto
 
             foreach(Unit unit in units)
             {
-                int role = unit.playerId;
+                int role = unit.playerRole;
                 //Debug.Log("One of player " + role);
                 if(numberOfUnitsPerPlayer[role] == 0)
                 {

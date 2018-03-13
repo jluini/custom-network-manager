@@ -41,7 +41,7 @@ GameObject:
   - 4: {fileID: 4000014191492724}
   - 212: {fileID: 212000012352156232}
   m_Layer: 0
-  m_Name: New Sprite
+  m_Name: Renderer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -117,6 +117,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerId: -1
+  renderer: {fileID: 212000012352156232}
 --- !u!114 &114000011482907298
 MonoBehaviour:
   m_ObjectHideFlags: 1

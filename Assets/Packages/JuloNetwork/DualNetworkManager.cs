@@ -307,6 +307,7 @@ namespace Julo.Network
             }
         }
 
+        // only server
         public DualGamePlayer GetPlayer(int role)
         {
             if(playerMap.ContainsKey(role))

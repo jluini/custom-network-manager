@@ -10,11 +10,28 @@ namespace Julo.CNMProto
     public class Unit : NetworkBehaviour
     {
         [SyncVar]
-        public int playerId = -1;
+        public int playerRole = -1;
+
+        [SyncVar]
+        public NetworkInstanceId playerNetId;
+
+        [Header("Hooks")]
+
+        public SpriteRenderer renderer;
 
         public override void OnStartClient()
         {
-            Debug.Log("Unit::OnStartClient()");
+            CNManager manager = CNManager.Instance;
+            //CNMPlayer player = (CNMPlayer)manager.GetPlayer(playerId);
+            CNMPlayer player = ClientScene.objects[playerNetId].GetComponent<CNMPlayer>();
+            Color color = manager.colors[player.playerColorNum];
+            SetColor(color);
+        }
+
+        private void SetColor(Color newColor)
+        {
+            if(renderer != null)
+                renderer.color = newColor;
         }
 
         // called on client when object destroyed by server
