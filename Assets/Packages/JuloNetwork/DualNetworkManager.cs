@@ -192,6 +192,7 @@ namespace Julo.Network
                 //Debug.LogFormat("Starting game: {0} (size={1}, players={2})", currentSceneName, currentSize, numPlayers);
 
                 gameState = GameState.LoadingGame;
+                SetServerInfo("Loading", "");
 
                 foreach(PlayerWrapper wrapper in gamePlayers.Values)
                 {
@@ -306,6 +307,26 @@ namespace Julo.Network
             }
         }
 
+        public DualGamePlayer GetPlayer(int role)
+        {
+            if(playerMap.ContainsKey(role))
+            {
+                PlayerWrapper wrapper = playerMap[role];
+
+                if(wrapper != null && wrapper.player != null)
+                {
+                    return wrapper.player;
+                }
+                else
+                {
+                    Debug.LogError("Invalid player");
+                    return null;
+                }
+            }
+            Debug.LogWarning("Missing player");
+            return null;
+        }
+        
         /********** MAIN CALLBACKS **********/
 
         public override void OnStartClient(NetworkClient client)
@@ -413,9 +434,11 @@ namespace Julo.Network
                 // TODO only actual players should be required to be ready
                 if(numReady == numTotal)
                 {
-                    Debug.Log("ALL READY");
+                    //Debug.Log("ALL READY");
                     gameState = GameState.Playing;
+                    SetServerInfo("Playing", "");
                     SpawnUnits();
+                    StartGame();
                 }
                 
             }
@@ -646,7 +669,10 @@ namespace Julo.Network
             Debug.LogWarning("Should override this");
         }
 
-
+        protected virtual void StartGame()
+        {
+            Debug.LogWarning("Should override this");
+        }
         /*********** MISC ***********/
 
         public void SetServerInfo(string status, string host)

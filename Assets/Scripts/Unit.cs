@@ -9,7 +9,7 @@ namespace Julo.CNMProto
 {
     public class Unit : NetworkBehaviour
     {
-
+        [SyncVar]
         public int playerId = -1;
 
         public override void OnStartClient()

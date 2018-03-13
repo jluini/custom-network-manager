@@ -72,8 +72,13 @@ namespace Julo.CNMProto
         private BackButtonDelegate backDelegate = null;
 
         // server
+        bool gameOver;
+        int currentPlayer;
         bool isPlaying = false;
         List<Unit> units;
+        int[] numberOfUnitsPerPlayer;
+        NetworkConnection lastOwningConnection;
+
         //List<DualGamePlayer> gamePlayers;
 
         // TODO it is correct to implement Start?
@@ -163,6 +168,7 @@ namespace Julo.CNMProto
             {
                 isPlaying = true;
                 units = new List<Unit>();
+                numberOfUnitsPerPlayer = new int[currentMaxPlayers];
             }
         }
 
@@ -316,11 +322,91 @@ namespace Julo.CNMProto
             Unit newUnit = newUnitObj.GetComponent<Unit>();
             
             units.Add(newUnit);
-            
+            numberOfUnitsPerPlayer[owner.role]++;
+
             newUnit.playerId = owner.role;
             
             NetworkServer.Spawn(newUnit.gameObject);
         }
+
+        protected override void StartGame()
+        {
+            StartCoroutine("RunGame");
+        }
+
+        private IEnumerator RunGame()
+        {
+            yield return new WaitForSeconds(1f);
+
+            lastOwningConnection = null;
+            currentPlayer = -1;
+            NextTurn();
+            yield break;
+        }
+
+        public void NextTurn()
+        {
+            gameOver = UpdateUnitNumbers();
+
+            if(gameOver)
+            {
+                Debug.Log("Game is over!!!");
+            }
+            else
+            {
+                do {
+                    currentPlayer = (currentPlayer + 1) % currentMaxPlayers;
+                } while(numberOfUnitsPerPlayer[currentPlayer] == 0);
+
+                Debug.LogFormat("Is turn of {0}", currentPlayer);
+
+                DualGamePlayer current = GetPlayer(currentPlayer);
+
+                if(current.connectionToClient != lastOwningConnection)
+                {
+                    Debug.Log("Change authority");
+                    foreach(Unit unit in units)
+                    {
+                        NetworkIdentity unitIdentity = unit.GetComponent<NetworkIdentity>();
+                        if(lastOwningConnection != null)
+                        {
+                            unitIdentity.RemoveClientAuthority(lastOwningConnection);
+                        }
+                        unitIdentity.AssignClientAuthority(current.connectionToClient);
+                    }
+
+                    lastOwningConnection = current.connectionToClient;
+                }
+
+                ((CNMPlayer)current).RpcPlay();
+            } 
+        }
+
+        private bool UpdateUnitNumbers()
+        {
+            for(int i = 0; i < currentMaxPlayers; i++)
+            {
+                numberOfUnitsPerPlayer[i] = 0;
+            }
+
+            int numAliveTeams = 0;
+
+            //Debug.Log("TOTAL = " + units.Count);
+
+            foreach(Unit unit in units)
+            {
+                int role = unit.playerId;
+                //Debug.Log("One of player " + role);
+                if(numberOfUnitsPerPlayer[role] == 0)
+                {
+                    numAliveTeams++;
+                }
+                numberOfUnitsPerPlayer[role]++;
+            }
+
+            return numAliveTeams <= 1;
+        }
+
 
         // TODO avoid override from NetworkManager...
         public override void OnClientSceneChanged(NetworkConnection conn)
