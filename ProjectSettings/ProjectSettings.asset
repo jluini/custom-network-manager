@@ -512,7 +512,7 @@ PlayerSettings:
   XboxOne::VR::enabledDevices: []
   iOS::VR::enabledDevices: []
   tvOS::VR::enabledDevices: []
-  cloudProjectId: 
-  projectName: 
-  organizationId: 
+  cloudProjectId: 59144429-526b-4ce0-bc32-d67994385c84
+  projectName: CNM
+  organizationId: jluini
   cloudEnabled: 0
