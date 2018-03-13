@@ -78,7 +78,7 @@ namespace Julo.Network
         public override void OnNetworkDestroy()
         {
             base.OnNetworkDestroy();
-            ///*Julo*/Debug.Log(string.Format("{0} is network destroyed", netId));
+            ///*Julo*/Debug.Log(string.Format("Player {0} is network destroyed", netId));
 
             if(role >= 0)
             {

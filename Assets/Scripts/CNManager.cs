@@ -7,6 +7,10 @@ using UnityEngine.UI;
 using UnityEngine.Networking;
 using UnityEngine.EventSystems;
 
+//#if UNITY_EDITOR
+//using UnityEditor;
+//#endif
+
 using UnityEngine.SceneManagement;
 
 using Julo.Util;
@@ -25,6 +29,12 @@ namespace Julo.CNMProto
         [Header("GameManager")]
 
         public string playSceneName;
+        public SceneData[] scenes;
+
+        
+        public GameObject unitPrefab;
+
+        public Color[] colors;
 
         public PlayerData mainPlayerModel;
         public PlayerData secondaryPlayerModel;
@@ -45,6 +55,9 @@ namespace Julo.CNMProto
         public VisibilityToggling gamePanel;
         public LobbyPanel    lobbyPanel;
         public VisibilityToggling connectingPanel;
+        
+        public Text chatContent;
+        public InputField chatInput;
 
         [Header("Icons")]
         public Sprite nullIcon;
@@ -53,10 +66,15 @@ namespace Julo.CNMProto
         public Sprite joystickIcon;
         public Sprite cpuIcon;
 
+        // internal
+
         private delegate void BackButtonDelegate();
         private BackButtonDelegate backDelegate = null;
 
-        public Color[] colors;
+        // server
+        bool isPlaying = false;
+        List<Unit> units;
+        //List<DualGamePlayer> gamePlayers;
 
         // TODO it is correct to implement Start?
         private void Start()
@@ -65,9 +83,6 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(false);
         }
 
-
-        public Text chatContent;
-        public InputField chatInput;
 
         public void SendChat()
         {
@@ -79,11 +94,15 @@ namespace Julo.CNMProto
 
         private void OnGUI()
         {
-            
+            if(Input.GetKey(KeyCode.H))
+            {
+                chatInput.ActivateInputField();
+            }
             if(Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.KeypadEnter))
             {
                 if(chatInput.isFocused && chatInput.text != "") {
                     SendChat();
+                    chatInput.ActivateInputField();
                 }
             }
         }
@@ -92,43 +111,25 @@ namespace Julo.CNMProto
 
         public void OnClickVersus()
         {
-            CNMPlayer p1 = NewPlayer(mainPlayerModel);
-            CNMPlayer p2 = NewPlayer(secondaryPlayerModel);
-
-            AddHostedPlayer(p1);
-            AddHostedPlayer(p2);
-
-            if(!StartAsHost())
-            {
-                Destroy(p1.gameObject);
-                Destroy(p2.gameObject);
-            }
+            List<CNMPlayer> players = new List<CNMPlayer>();
+            players.Add(NewPlayer(mainPlayerModel));
+            players.Add(NewPlayer(secondaryPlayerModel));
+            StartAsHost(players);
         }
-
+        
         public void OnClickVersusCpu()
         {
-            CNMPlayer p1 = NewPlayer(mainPlayerModel);
-            CNMPlayer cpu = NewPlayer(cpuPlayerModel);
-
-            AddHostedPlayer(p1);
-            AddHostedPlayer(cpu);
-            
-            if(!StartAsHost())
-            {
-                Destroy(p1.gameObject);
-                Destroy(cpu.gameObject);
-            }
+            List<CNMPlayer> players = new List<CNMPlayer>();
+            players.Add(NewPlayer(mainPlayerModel));
+            players.Add(NewPlayer(cpuPlayerModel));
+            StartAsHost(players);
         }
 
         public void OnClickHost()
         {
-            CNMPlayer p1 = NewPlayer(mainPlayerModel);
-            AddHostedPlayer(p1);
-
-            if(!StartAsHost())
-            {
-                Destroy(p1.gameObject);
-            }
+            List<CNMPlayer> players = new List<CNMPlayer>();
+            players.Add(NewPlayer(mainPlayerModel));
+            StartAsHost(players);
         }
 
         public void OnClickJoin()
@@ -149,44 +150,21 @@ namespace Julo.CNMProto
                 JuloDebug.Warn("No back callback");
             }
         }
-        
+
+        // only server
         public void OnClickPlay()
         {
-            // TODO implement
-            
-            // ...
-        }
+            if(!NetworkServer.active) {
+                Debug.LogWarning("Client cannot click play");
+                return;
+            }
 
-        /******** Client listening ********/
-        
-        protected override void OnClientConnected(bool isHost)
-        {
-            SwitchToLobbyMode();
+            if(TryToStartGame())
+            {
+                isPlaying = true;
+                units = new List<Unit>();
+            }
         }
-        
-        protected override void OnClientDisconnected()
-        {
-            SwitchToMenuMode();
-        }
-
-        public override void OnPlayerAdded(DualGamePlayer newPlayer)
-        {
-            playerList.OnPlayerAdded(newPlayer);
-        }
-        public override void OnPlayerRemoved(DualGamePlayer player)
-        {
-            playerList.OnPlayerRemoved(player);
-        }
-        public override void OnRoleChanged(DualGamePlayer player, int oldRole)
-        {
-            playerList.OnRoleChanged(player, oldRole);
-        }
-        public override void OnRoomSizeChanged(int minPlayers, int maxPlayers)
-        {
-            playerList.OnRoomSizeChanged(minPlayers, maxPlayers);
-        }
-
-        /***************************/
 
         public void OnClientNewMessage(string message)
         {
@@ -231,6 +209,28 @@ namespace Julo.CNMProto
         }
 
         /********** internal **********/
+        
+        private void StartAsHost(List<CNMPlayer> players)
+        {
+            if(scenes.Length == 0)
+            {
+                Debug.LogError("No scenes");
+                return;
+            }
+            
+            foreach(CNMPlayer player in players)
+            {
+                AddHostedPlayer(player);
+            }
+            
+            if(!StartAsHost(scenes[0]))
+            {
+                foreach(CNMPlayer player in players)
+                {
+                    Destroy(player.gameObject);
+                }
+            }
+        }
 
         private CNMPlayer NewPlayer()
         {
@@ -251,6 +251,33 @@ namespace Julo.CNMProto
         
         /********* overriden from DualNetworkManager *********/
 
+        protected override void OnClientConnected(bool isHost)
+        {
+            SwitchToLobbyMode();
+        }
+        
+        protected override void OnClientDisconnected()
+        {
+            SwitchToMenuMode();
+        }
+        
+        public override void OnPlayerAdded(DualGamePlayer newPlayer)
+        {
+            playerList.OnPlayerAdded(newPlayer);
+        }
+        public override void OnPlayerRemoved(DualGamePlayer player)
+        {
+            playerList.OnPlayerRemoved(player);
+        }
+        public override void OnRoleChanged(DualGamePlayer player, int oldRole)
+        {
+            playerList.OnRoleChanged(player, oldRole);
+        }
+        public override void OnRoomSizeChanged(int minPlayers, int maxPlayers)
+        {
+            playerList.OnRoomSizeChanged(minPlayers, maxPlayers);
+        }
+        
         protected override DualGamePlayer CreatePlayer(int connectionId, short playerControllerId)
         {
             bool isLocal = (connectionId == 0);
@@ -268,6 +295,40 @@ namespace Julo.CNMProto
             return player;
         }
 
+        // only server
+        protected override void SpawnUnit(DualGamePlayer owner, int unitId, Transform location)
+        {
+            if(unitPrefab == null)
+            {
+                Debug.LogError("No unit prefab");
+                return;
+            }
+            
+            GameObject newUnitObj;
+            //#if UNITY_EDITOR
+            //newUnitObj = PrefabUtility.InstantiatePrefab(unitPrefab) as GameObject;
+            //newUnitObj.transform.position = location.position;
+            //newUnitObj.transform.rotation = location.rotation;
+            //#else
+            newUnitObj = Instantiate(unitPrefab, location.position, location.rotation) as GameObject;
+            //#endif
+            
+            Unit newUnit = newUnitObj.GetComponent<Unit>();
+            
+            units.Add(newUnit);
+            
+            newUnit.playerId = owner.role;
+            
+            NetworkServer.Spawn(newUnit.gameObject);
+        }
+
+        // TODO avoid override from NetworkManager...
+        public override void OnClientSceneChanged(NetworkConnection conn)
+        {
+            base.OnClientSceneChanged(conn);
+            gamePanel.Hide();
+        }
+        
         /************* Misc *************/
 
         public Color GetColor(ushort index)

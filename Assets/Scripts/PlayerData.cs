@@ -2,8 +2,6 @@
 
 using UnityEngine;
 
-//usi
-
 namespace Julo.CNMProto
 {
     [System.Serializable]

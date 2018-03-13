@@ -15,6 +15,7 @@ namespace Julo.Network
     {
         [Header("DualNetworkManager")]
 
+        // TODO remove
         public int minPlayers = 2;
         public int maxPlayers = 3;
 
@@ -26,21 +27,32 @@ namespace Julo.Network
         public Text statusInfo;
         public Text hostInfo;
 
-        private enum DNMState { Off, Hosting, Connecting, Client }
+        private enum DNMState { Off, Host, Connecting, Client }
         private DNMState state = DNMState.Off;
         private List<DualGamePlayer> cachedLocalPlayers = new List<DualGamePlayer>();
 
-        
+        // TODO synchronize
+        public string currentSceneName;
+        public int currentMinPlayers;
+        public int currentMaxPlayers;
+        public int currentSize;
+
         /*** SERVER ***/
+        public SceneData currentScene = null;
+
         private int maximumSpectatorRole = 100;
         private Dictionary<int, PlayerWrapper> playerMap;
+        //private numPlayers = 0;
 
+        private enum GameState { NoGame, LoadingGame, Playing }
+        private GameState gameState = GameState.NoGame;
 
-        /*** CLIENT ***/
+        // TODO is necessary?
+        private Dictionary<int, PlayerWrapper> gamePlayers;
 
         /************* DUAL METHODS *************/
 
-        public bool StartAsHost()
+        public bool StartAsHost(SceneData initialScene)
         {
             if(state != DNMState.Off)
             {
@@ -59,8 +71,21 @@ namespace Julo.Network
 
             if(hostStarted)
             {
-                state = DNMState.Hosting;
+                state = DNMState.Host;
+                if(gameState != GameState.NoGame)
+                {
+                    Debug.LogWarning("Already in game mode");
+                    gameState = GameState.NoGame;
+                }
+
                 SetServerInfo("Hosting", networkAddress);
+
+                currentScene = initialScene;
+                // synchronized variables:
+                currentSceneName  = currentScene.englishName;
+                currentMinPlayers = currentScene.minPlayers;
+                currentMaxPlayers = currentScene.maxPlayers;
+                currentSize = currentScene.defaultSize;
             }
             else
             {
@@ -102,9 +127,10 @@ namespace Julo.Network
             cachedLocalPlayers.Add(player);
         }
 
+        // stop host / client / connection attempt
         public void Stop()
         {
-            if(state == DNMState.Hosting)
+            if(state == DNMState.Host)
             {
                 this.StopHost();
                 state = DNMState.Off;
@@ -120,6 +146,77 @@ namespace Julo.Network
                 Debug.LogError("Invalid state");
             }
         }
+
+        public bool TryToStartGame()
+        {
+            if(state != DNMState.Host)
+            {
+                Debug.LogError("Invalid state");
+                return false;
+            }
+            if(gameState != GameState.NoGame)
+            {
+                Debug.LogError("Invalid state");
+                return false;
+            }
+            if(currentSize < 1 || currentSize < currentScene.minSize || currentSize > currentScene.maxSize)
+            {
+                Debug.LogError("Invalid size");
+                return false;
+            }
+            
+            //currentPlayers = new List<DualGamePlayer>();
+            gamePlayers = new Dictionary<int, PlayerWrapper>();
+
+            for(int i = 0; i < currentMaxPlayers; i++)
+            {
+                if(playerMap.ContainsKey(i))
+                {
+                    PlayerWrapper wrapper = playerMap[i];
+                    if(wrapper != null && wrapper.player != null && wrapper.player.role == i)
+                    {
+                        gamePlayers[i] = wrapper;
+                    }
+                    else
+                    {
+                        Debug.LogErrorFormat("Invalid player: {0}.({1})({2})({3})", i, wrapper != null, wrapper.player != null, wrapper.player.role);
+                    }
+                }
+            }
+
+            int numPlayers = gamePlayers.Count;
+
+            if(numPlayers >= currentMinPlayers)
+            {
+                // start game
+                //Debug.LogFormat("Starting game: {0} (size={1}, players={2})", currentSceneName, currentSize, numPlayers);
+
+                gameState = GameState.LoadingGame;
+
+                foreach(PlayerWrapper wrapper in gamePlayers.Values)
+                {
+                    NetworkConnection conn = NetworkServer.connections[wrapper.connectionId];
+                    Debug.LogFormat("{0}: {1}", wrapper.player.role, conn.isReady);
+                }
+
+                // this sets all clients as not-ready
+                ServerChangeScene(currentScene.assetName);
+
+                foreach(PlayerWrapper wrapper in gamePlayers.Values)
+                {
+                    NetworkConnection conn = NetworkServer.connections[wrapper.connectionId];
+                    Debug.LogFormat("{0}: {1}", wrapper.player.role, conn.isReady);
+                }
+
+                return true;
+            }
+            else
+            {
+                Debug.Log("Not enough players");
+                return false;
+            }
+        }
+
         // up one place
         public void PlayerUp(DualGamePlayer player)
         {
@@ -209,38 +306,6 @@ namespace Julo.Network
             }
         }
 
-        private void ChangeRole(int oldRole, int newRole)
-        {
-            if(playerMap.ContainsKey(newRole)) {
-                Debug.LogError("Occupied");
-            } else if(!playerMap.ContainsKey(oldRole)) {
-                Debug.LogError("Inexistent");
-            } else {
-                PlayerWrapper playerWrap = playerMap[oldRole];
-                playerMap.Remove(oldRole);
-
-                playerWrap.player.role = newRole;
-
-                playerMap.Add(newRole, playerWrap);
-            }
-        }
-
-
-        private void SwitchRoles(int role1, int role2)
-        {
-            PlayerWrapper player1 = playerMap[role1];
-            PlayerWrapper player2 = playerMap[role2];
-
-            playerMap.Remove(role1);
-            playerMap.Remove(role2);
-
-            player1.player.role = role2;
-            player2.player.role = role1;
-
-            playerMap.Add(role2, player1);
-            playerMap.Add(role1, player2);
-        }
-
         /********** MAIN CALLBACKS **********/
 
         public override void OnStartClient(NetworkClient client)
@@ -264,6 +329,12 @@ namespace Julo.Network
         }
 
         /************* SERVER CALLBACKS *************/
+        // call on server when a client just connected
+        public override void OnServerConnect(NetworkConnection connectionToClient)
+        {
+            Debug.LogFormat("Connecting client {0} / {1}", state, gameState);
+        }
+
         
         // called on server when a client disconnected
         public override void OnServerDisconnect(NetworkConnection connectionToClient)
@@ -307,7 +378,56 @@ namespace Julo.Network
         // called on server when a client is ready
         public override void OnServerReady(NetworkConnection connectionToClient)
         {
+            JuloDebug.Log(string.Format("OnServerReady {0} / {1}", state, gameState));
+
+            if(state != DNMState.Host)
+            {
+                Debug.LogErrorFormat("Invalid state: {0}", state);
+                return;
+            }
+
             NetworkServer.SetClientReady(connectionToClient);
+
+            if(gameState == GameState.NoGame)
+            {
+                //Debug.Log("Do something?");
+            }
+            else if(gameState == GameState.LoadingGame)
+            {
+                int numReady = 0;
+                int numTotal = NetworkServer.connections.Count;
+                
+                for(int i = 0; i < numTotal; i++)
+                {
+                    NetworkConnection conn = NetworkServer.connections[i];
+                    bool isReady = conn.isReady;
+                    if(isReady)
+                    {
+                        numReady++;
+                    }
+                    //Debug.LogFormat("{0} is {1} ready", conn.connectionId, isReady ? "" : "NOT");
+                }
+                
+                JuloDebug.Log(string.Format("OnServerReady ({0}/{1} ready)", numReady, numTotal));
+                
+                // TODO only actual players should be required to be ready
+                if(numReady == numTotal)
+                {
+                    Debug.Log("ALL READY");
+                    gameState = GameState.Playing;
+                    SpawnUnits();
+                }
+                
+            }
+            else if(gameState == GameState.Playing)
+            {
+                // Do something?
+            }
+            else
+            {
+                Debug.LogErrorFormat("Invalid state: {0}", gameState);
+                return;
+            }
         }
 
         // called on server when a client requests to add a player for it
@@ -315,19 +435,31 @@ namespace Julo.Network
         public override void OnServerAddPlayer(NetworkConnection connectionToClient, short playerControllerId)
         {
             //JuloDebug.Log(string.Format("OnSeverAddPlayer({0}, {1})", connectionToClient.connectionId, playerControllerId)); 
+
+            if(state != DNMState.Host)
+            {
+                Debug.LogErrorFormat("Invalid state: {0}", state);
+                return;
+            }
+
             DualGamePlayer newPlayer = null;
 
             bool isLocal = (connectionToClient.connectionId == 0);
 
             if(isLocal)
             { // if the player is local it should be cached
-                if(playerControllerId < cachedLocalPlayers.Count)
+                if(gameState != GameState.NoGame)
+                {
+                    Debug.LogErrorFormat("Invalid state: {0}", gameState);
+                }
+                else if(playerControllerId < cachedLocalPlayers.Count)
                 {
                     newPlayer = cachedLocalPlayers[playerControllerId];
                 }
                 else
                 {
                     JuloDebug.Err("Player " + playerControllerId + " should be cached");
+                    //return;
                 }
             }
             else
@@ -335,17 +467,23 @@ namespace Julo.Network
                 if(connectionToClient.playerControllers.Count > 0)
                 {
                     Debug.LogWarning("Already a player for that connection");
+                    return;
                 }
+
+                bool isPlaying = gameState != GameState.NoGame;
+
                 newPlayer = CreatePlayer(connectionToClient.connectionId, playerControllerId);
 
                 int newRole = -1;
 
-                if(joinAsSpectator)
+                if(isPlaying || joinAsSpectator)
                 {
+                    // join as spectator
                     newRole = maximumSpectatorRole + 1;
                 }
                 else
                 {
+                    // try to join as player
                     bool assigned = false;
                     
                     // try to enter as player
@@ -394,6 +532,15 @@ namespace Julo.Network
             NetworkServer.Destroy(player.gameObject);
         }
 
+        public override void OnServerSceneChanged(string sceneName)
+        {
+            JuloDebug.Log("On server scene changed: waiting for clients to be ready");
+            //base.OnServerSceneChanged(sceneName);
+
+            if(state != DNMState.Host) { Debug.LogError("Invalid state"); return; }
+            if(gameState != GameState.LoadingGame) { Debug.LogError("Invalid state"); return; }
+        }
+
         // called on server when an error occurs
         public override void OnServerError(NetworkConnection connectionToClient, int errorCode)
         {
@@ -409,7 +556,8 @@ namespace Julo.Network
 
             if(isLocalClient)
             {
-                if(state != DNMState.Hosting) { Debug.LogError("Invalid state"); }
+                if(state != DNMState.Host) { Debug.LogError("Invalid state"); }
+                if(gameState != GameState.NoGame) { Debug.LogError("Invalid state"); }
 
                 // add hosted players
                 for(int i = 0; i < cachedLocalPlayers.Count; i++)
@@ -418,6 +566,8 @@ namespace Julo.Network
                 }
 
                 OnClientConnected(true);
+
+                Debug.Log("READY LOCAL: " + connectionToServer.isReady);
             }
             else
             {
@@ -425,7 +575,7 @@ namespace Julo.Network
                 state = DNMState.Client;
                 SetServerInfo("Client", "");
 
-                ClientScene.Ready(connectionToServer); // TODO is ready ??
+                //ClientScene.Ready(connectionToServer); // TODO is ready ??
 
                 // ask the server to add player for this remote client
                 ClientScene.AddPlayer(connectionToServer, 0);
@@ -441,6 +591,21 @@ namespace Julo.Network
             StopClient();
         }
 
+        public override void OnClientSceneChanged(NetworkConnection connectionToServer)
+        {
+            JuloDebug.Log("On client scene changed");
+            //base.OnClientSceneChanged(conn);
+
+            if(ClientScene.ready)
+            {
+                JuloDebug.Warn("Is already ready");
+            }
+            else
+            {
+                ClientScene.Ready(connectionToServer);
+            }
+        }
+
         // called on client when a network error occurs
         public override void OnClientError(NetworkConnection connectionToServer, int errorCode)
         {
@@ -450,7 +615,7 @@ namespace Julo.Network
         // called on client when told to be not-ready by a server
         public override void OnClientNotReady(NetworkConnection connectionToServer)
         {
-            Debug.LogWarning("OnClientNotReady");
+            //JuloDebug.Warn("OnClientNotReady " + connectionToServer.isReady);
         }
 
         /*********** DUAL CLIENT METHODS ***********/
@@ -459,6 +624,8 @@ namespace Julo.Network
         public virtual void OnPlayerRemoved(DualGamePlayer player) { }
         public virtual void OnRoleChanged(DualGamePlayer player, int oldRole) { }
         public virtual void OnRoomSizeChanged(int minPlayers, int maxPlayers) { }
+
+        /*********** Methods to override ***********/
 
         protected virtual void OnClientConnected(bool isHost) { }
         protected virtual void OnClientDisconnected() { }
@@ -474,6 +641,12 @@ namespace Julo.Network
             return playerObj.GetComponent<DualGamePlayer>();
         }
 
+        protected virtual void SpawnUnit(DualGamePlayer owner, int unitId, Transform location)
+        {
+            Debug.LogWarning("Should override this");
+        }
+
+
         /*********** MISC ***********/
 
         public void SetServerInfo(string status, string host)
@@ -483,6 +656,68 @@ namespace Julo.Network
 
             if(hostInfo != null)
                 hostInfo.text = host;
+        }
+
+        /**** Server internal ****/
+
+        private void ChangeRole(int oldRole, int newRole)
+        {
+            if(playerMap.ContainsKey(newRole)) {
+                Debug.LogError("Occupied");
+            } else if(!playerMap.ContainsKey(oldRole)) {
+                Debug.LogError("Inexistent");
+            } else {
+                PlayerWrapper playerWrap = playerMap[oldRole];
+                playerMap.Remove(oldRole);
+
+                playerWrap.player.role = newRole;
+
+                playerMap.Add(newRole, playerWrap);
+            }
+        }
+
+        private void SwitchRoles(int role1, int role2)
+        {
+            PlayerWrapper player1 = playerMap[role1];
+            PlayerWrapper player2 = playerMap[role2];
+
+            playerMap.Remove(role1);
+            playerMap.Remove(role2);
+
+            player1.player.role = role2;
+            player2.player.role = role1;
+
+            playerMap.Add(role2, player1);
+            playerMap.Add(role1, player2);
+        }
+
+        // called in server to start the game spawning the initial units
+        private void SpawnUnits()
+        {
+            List<SpawnPoint> spawnPoints = JuloFind.allWithComponent<SpawnPoint>();
+
+            foreach(SpawnPoint sp in spawnPoints)
+            {
+                int role = sp.playerId;
+                if(playerMap.ContainsKey(role))
+                {
+                    PlayerWrapper wrapper = playerMap[role];
+                    DualGamePlayer player = wrapper.player;
+
+                    if(role >= 0 && role < numPlayers)
+                    {
+                        SpawnUnit(player, sp.unitId, sp.transform);
+                    }
+                    else
+                    {
+                        Debug.LogWarningFormat("Invalid role");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarningFormat("Ignoring unit for player {0}", role);
+                }
+            }
         }
     }
 }
