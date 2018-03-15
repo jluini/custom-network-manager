@@ -43,36 +43,38 @@ namespace Julo.CNMProto
         public PlayerData cpuPlayerModel;
         public PlayerData remotePlayerModel;
 
-        [Header("Hooks")]
-
-        public Text title;
+        [Header("Panels")]
 
         public Button backButton;
 
-        public PlayerList playerList;
-
-        public Button playButton;
-        public Toggle joinAsSpectatorToggle;
-
         public PanelManager panelManager;
-
         public Panel mainMenuPanel;
         public Panel lobbyPanel;
-        public Panel connectingPanel;
         public Panel onlinePanel;
+        public Panel connectingPanel;
 
+        [Header("Online")]
+        public InputField yourName;
+        public Transform matchList;
+        public InputField newMatchName;
+
+        public GameObject findingDisplay;
+        public GameObject noMatchesNotice;
+        public GameObject errorFindingNotice;
+
+        [Header("Game")]
+        public Text title;
+        public Button playButton;
+        public Toggle joinAsSpectatorToggle;
         public VisibilityToggling gameOptions;
         public VisibilityToggling serverOptions;
 
-        /** CHAT **/
+        [Header("Lobby")]
+        public PlayerList playerList;
+
+        [Header("Chat")]
         public Text chatContent;
         public InputField chatInput;
-
-        /** Online **/
-        public Transform matchList;
-
-        public InputField newMatchName;
-
 
         [Header("Icons")]
         public Sprite nullIcon;
@@ -129,11 +131,12 @@ namespace Julo.CNMProto
 
         /********** button handlers **********/
 
-        /****************************************************/
+        /******************* ONLINE *************************/
 
         public void OnClickPlayOnline()
         {
             SwitchToOnlineMode();
+
         }
 
         public void OnClickNewMatch()
@@ -166,6 +169,7 @@ namespace Julo.CNMProto
             }
 
             matchMaker.ListMatches(0, 10, "", false, 0, 0, OnInternetMatchList);
+            findingDisplay.SetActive(true);
         }
 
         private void OnInternetMatchCreate(bool success, string extendedInfo, MatchInfo matchInfo)
@@ -194,11 +198,15 @@ namespace Julo.CNMProto
 
         private void OnInternetMatchList(bool success, string extendedInfo, List<MatchInfoSnapshot> matches)
         {
+            findingDisplay.SetActive(false);
             if(success)
             {
+                errorFindingNotice.SetActive(false);
+
                 if(matches.Count != 0)
                 {
-                    Debug.Log("A list of matches was returned");
+                    //
+                    noMatchesNotice.SetActive(false);
 
                     int i = 0;
                     foreach(MatchInfoSnapshot match in matches)
@@ -215,7 +223,7 @@ namespace Julo.CNMProto
                         MatchDisplay matchDisplay = newMatchObj.GetComponent<MatchDisplay>();
                         matchDisplay.DisplayMatch(match, OnInternetMatchJoin);
 
-                        matchDisplay.transform.SetParent(matchList);
+                        matchDisplay.transform.SetParent(matchList, false);
                     }
 
 
@@ -223,8 +231,13 @@ namespace Julo.CNMProto
                 }
                 else
                 {
-                    Debug.Log("No matches!!!");
+                    //Debug.Log("No matches!!!");
+                    noMatchesNotice.SetActive(true);
                 }
+            }
+            else
+            {
+                errorFindingNotice.SetActive(true);
             }
         }
 
@@ -346,7 +359,7 @@ namespace Julo.CNMProto
         private void SwitchToOnlineMode()
         {
             backButton.gameObject.SetActive(true);
-            backDelegate = this.Stop;
+            backDelegate = this.SwitchToMenuMode;
 
             panelManager.OpenPanel(onlinePanel);
             /*
@@ -362,16 +375,7 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(true);
             backDelegate = this.Stop;
 
-            // TODO...
             panelManager.OpenPanel(connectingPanel);
-
-            /*
-            mainMenuPanel.Hide();
-            gamePanel.Hide();
-            lobbyPanel.Hide();
-            connectingPanel.Show();
-            onlinePanel.Hide();
-            */
         }
 
         /********** internal **********/
@@ -420,12 +424,15 @@ namespace Julo.CNMProto
         protected override void OnClientConnected(bool isHost)
         {
             SwitchToLobbyMode();
+            //connectingNotice.Hide();
 
             title.text = matchName;
+            Debug.LogFormat("Starting game with name '{0}'", matchName);
         }
         
         protected override void OnClientDisconnected()
         {
+            Debug.Log("OnClientDisconnected");
             SwitchToMenuMode();
         }
         

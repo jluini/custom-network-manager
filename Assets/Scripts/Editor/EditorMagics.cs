@@ -137,7 +137,7 @@ public class EditorMagics : MonoBehaviour {
 
     static void newPlayer(string name, Color color, string role)
     {
-        GameObject newPlayerObj = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+        GameObject newPlayerObj = PrefabUtility.InstantiatePrefab(playerPrefab) as GameObject;
 
         CNMPlayer newPlayer = newPlayerObj.GetComponent<CNMPlayer>();
         newPlayer.nameInput.text = name;
@@ -146,8 +146,10 @@ public class EditorMagics : MonoBehaviour {
         newPlayer.transform.SetParent(list);
     }
     static void newWildcard()
+
     {
-        GameObject newWildcard = Instantiate(wildcardPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+        // Instantiate(wildcardPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+        GameObject newWildcard = PrefabUtility.InstantiatePrefab(wildcardPrefab) as GameObject; 
         newWildcard.transform.SetParent(list);
     }
 

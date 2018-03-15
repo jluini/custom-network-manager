@@ -56,7 +56,7 @@ namespace Julo.CNMProto
             {
                 Transform wildcard = (Transform)Instantiate(wildcardPrefab, Vector3.zero, Quaternion.identity);
 
-                wildcard.SetParent(playerContainer);
+                wildcard.SetParent(playerContainer, false);
                 wildcard.SetAsLastSibling();
 
                 wildcards.Add(wildcard);
@@ -116,7 +116,7 @@ namespace Julo.CNMProto
                         if(player.role < other.role)
                         {
                             added = true;
-                            player.transform.SetParent(playerContainer);
+                            player.transform.SetParent(playerContainer, false);
                             player.transform.SetSiblingIndex(i);
                         }
                     }
@@ -128,7 +128,9 @@ namespace Julo.CNMProto
 
                 if(!added)
                 {
-                    player.transform.SetParent(playerContainer);
+                    player.transform.SetParent(playerContainer, false);
+
+                    // I think this is not needed
                     player.transform.SetAsLastSibling();
                 }
             }
@@ -152,7 +154,7 @@ namespace Julo.CNMProto
                 
             }
 
-            player.transform.SetParent(null);
+            player.transform.SetParent(null, false);
 
             RedrawMoveButtons();
         }
@@ -197,7 +199,7 @@ namespace Julo.CNMProto
             }
 
             int oldCount = playerContainer.childCount;
-            player.transform.SetParent(null);
+            player.transform.SetParent(null, false);
             int newCount = playerContainer.childCount;
 
             if(newCount != oldCount - 1)
@@ -226,8 +228,7 @@ namespace Julo.CNMProto
             //else
             //    Debug.LogWarningFormat("Wildcard {0} not hidden, hiding", index);
             wildcards[index].gameObject.SetActive(false);
-
-            with.SetParent(playerContainer);
+            with.SetParent(playerContainer, false);
             with.SetSiblingIndex(wildcards[index].GetSiblingIndex());
         }
 
