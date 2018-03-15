@@ -4,8 +4,9 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Networking;
 using UnityEngine.EventSystems;
+using UnityEngine.Networking;
+using UnityEngine.Networking.Match;
 
 //#if UNITY_EDITOR
 //using UnityEditor;
@@ -32,6 +33,7 @@ namespace Julo.CNMProto
         public SceneData[] scenes;
 
         
+        public GameObject matchPrefab;
         public GameObject unitPrefab;
 
         public Color[] colors;
@@ -43,21 +45,34 @@ namespace Julo.CNMProto
 
         [Header("Hooks")]
 
+        public Text title;
+
         public Button backButton;
 
         public PlayerList playerList;
 
-        public VisibilityToggling serverOptions;
         public Button playButton;
         public Toggle joinAsSpectatorToggle;
 
-        public MainMenuPanel mainMenuPanel;
-        public VisibilityToggling gamePanel;
-        public LobbyPanel    lobbyPanel;
-        public VisibilityToggling connectingPanel;
-        
+        public PanelManager panelManager;
+
+        public Panel mainMenuPanel;
+        public Panel lobbyPanel;
+        public Panel connectingPanel;
+        public Panel onlinePanel;
+
+        public VisibilityToggling gameOptions;
+        public VisibilityToggling serverOptions;
+
+        /** CHAT **/
         public Text chatContent;
         public InputField chatInput;
+
+        /** Online **/
+        public Transform matchList;
+
+        public InputField newMatchName;
+
 
         [Header("Icons")]
         public Sprite nullIcon;
@@ -74,7 +89,7 @@ namespace Julo.CNMProto
         // server
         bool gameOver;
         int currentPlayer;
-        bool isPlaying = false;
+        //bool isPlaying = false;
         List<Unit> units;
         int[] numberOfUnitsPerPlayer;
         NetworkConnection lastOwningConnection;
@@ -113,6 +128,120 @@ namespace Julo.CNMProto
         }
 
         /********** button handlers **********/
+
+        /****************************************************/
+
+        public void OnClickPlayOnline()
+        {
+            SwitchToOnlineMode();
+        }
+
+        public void OnClickNewMatch()
+        {
+            string gameName = newMatchName.text;
+            if(gameName == "")
+                return;
+                
+            if(matchMaker == null)
+            {
+                StartMatchMaker();
+            }
+
+            JuloDebug.Log(string.Format("Creating game {0}", gameName));
+            if(matchMaker != null)
+            {
+                matchMaker.CreateMatch(gameName, 16, true, "", "", "", 0, 0, OnInternetMatchCreate);
+            }
+            else
+            {
+                Debug.LogWarning("No matchmaker");
+            }
+        }
+
+        public void OnClickFindMatches()
+        {
+            if(matchMaker == null)
+            {
+                StartMatchMaker();
+            }
+
+            matchMaker.ListMatches(0, 10, "", false, 0, 0, OnInternetMatchList);
+        }
+
+        private void OnInternetMatchCreate(bool success, string extendedInfo, MatchInfo matchInfo)
+        {
+            // TODO
+
+            if(success)
+            {
+                Debug.Log("Match created!");
+
+                MatchInfo hostInfo = matchInfo;
+                NetworkServer.Listen(hostInfo, 9000);
+
+                List<CNMPlayer> players = new List<CNMPlayer>();
+                players.Add(NewPlayer(mainPlayerModel));
+                StartAsHost(players, hostInfo);
+            }
+            else
+            {
+                Debug.Log("Match creation failed");
+            }
+
+        }
+
+        //private string matchName = "New game";
+
+        private void OnInternetMatchList(bool success, string extendedInfo, List<MatchInfoSnapshot> matches)
+        {
+            if(success)
+            {
+                if(matches.Count != 0)
+                {
+                    Debug.Log("A list of matches was returned");
+
+                    int i = 0;
+                    foreach(MatchInfoSnapshot match in matches)
+                    {
+                        Debug.LogFormat("{0}. {1}", i, match.name);
+
+                        GameObject newMatchObj;
+                        //#if UNITY_EDITOR
+                        //newMatchObj = PrefabUtility.InstantiatePrefab(matchPrefab) as GameObject;
+                        //#else
+                        newMatchObj = Instantiate(matchPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+                        //#endif
+
+                        MatchDisplay matchDisplay = newMatchObj.GetComponent<MatchDisplay>();
+                        matchDisplay.DisplayMatch(match, OnInternetMatchJoin);
+
+                        matchDisplay.transform.SetParent(matchList);
+                    }
+
+
+                    // matchMaker.JoinMatch(matches[matches.Count - 1].networkId, "", "", "", 0, 0, OnInternetMatchJoin);
+                }
+                else
+                {
+                    Debug.Log("No matches!!!");
+                }
+            }
+        }
+
+        private void OnInternetMatchJoin(bool success, string extendedInfo, MatchInfo matchInfo)
+        {
+            if(success)
+            {
+                Debug.Log("Able to join a match");
+                StartAsClient(matchInfo);
+            }
+            else
+            {
+                Debug.LogError("Join match failed");
+            }
+        }
+
+        /****************************************************/
 
         public void OnClickVersus()
         {
@@ -166,7 +295,7 @@ namespace Julo.CNMProto
 
             if(TryToStartGame())
             {
-                isPlaying = true;
+                //isPlaying = true;
                 units = new List<Unit>();
                 numberOfUnitsPerPlayer = new int[currentMaxPlayers];
             }
@@ -182,11 +311,16 @@ namespace Julo.CNMProto
         private void SwitchToMenuMode()
         {
             backButton.gameObject.SetActive(false);
-            
+
+            panelManager.OpenPanel(mainMenuPanel);
+
+            /*
             mainMenuPanel.Show();
             lobbyPanel.Hide();
             gamePanel.Hide();
             connectingPanel.Hide();
+            onlinePanel.Hide();
+            */
         }
 
         private void SwitchToLobbyMode()
@@ -194,13 +328,33 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(true);
             backDelegate = this.Stop;
 
+            panelManager.OpenPanel(lobbyPanel);
+
+            /*
             mainMenuPanel.Hide();
             lobbyPanel.Show();
             gamePanel.Show();
             connectingPanel.Hide();
+            onlinePanel.Hide();
+            */
 
+            // TODO
             joinAsSpectatorToggle.interactable = NetworkServer.active;
             playButton.interactable = NetworkServer.active;
+        }
+
+        private void SwitchToOnlineMode()
+        {
+            backButton.gameObject.SetActive(true);
+            backDelegate = this.Stop;
+
+            panelManager.OpenPanel(onlinePanel);
+            /*
+            mainMenuPanel.Hide();
+            gamePanel.Hide();
+            lobbyPanel.Hide();
+            onlinePanel.Show();
+            */
         }
 
         private void SwitchToConnectingMode()
@@ -208,15 +362,21 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(true);
             backDelegate = this.Stop;
 
+            // TODO...
+            panelManager.OpenPanel(connectingPanel);
+
+            /*
             mainMenuPanel.Hide();
             gamePanel.Hide();
             lobbyPanel.Hide();
             connectingPanel.Show();
+            onlinePanel.Hide();
+            */
         }
 
         /********** internal **********/
         
-        private void StartAsHost(List<CNMPlayer> players)
+        private void StartAsHost(List<CNMPlayer> players, MatchInfo hostInfo = null)
         {
             if(scenes.Length == 0)
             {
@@ -229,7 +389,7 @@ namespace Julo.CNMProto
                 AddHostedPlayer(player);
             }
             
-            if(!StartAsHost(scenes[0]))
+            if(!StartAsHost(scenes[0], hostInfo))
             {
                 foreach(CNMPlayer player in players)
                 {
@@ -260,6 +420,8 @@ namespace Julo.CNMProto
         protected override void OnClientConnected(bool isHost)
         {
             SwitchToLobbyMode();
+
+            title.text = matchName;
         }
         
         protected override void OnClientDisconnected()
@@ -413,7 +575,7 @@ namespace Julo.CNMProto
         public override void OnClientSceneChanged(NetworkConnection conn)
         {
             base.OnClientSceneChanged(conn);
-            gamePanel.Hide();
+            gameOptions.Hide();
         }
         
         /************* Misc *************/

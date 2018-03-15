@@ -15,21 +15,27 @@ public class EditorMagics : MonoBehaviour {
 
     #if UNITY_EDITOR
 
-    static MainMenuPanel menu
+    static GameObject mainMenu
     {
         get {
-            return JuloFind.singleton<MainMenuPanel>();
+            return JuloFind.byName("MainMenu");
         }
     }
-    static VisibilityToggling gamePanel
+    static GameObject gameOptions
     {
         get {
-            return JuloFind.byName<VisibilityToggling>("GamePanel");
+            return JuloFind.byName("GameOptions");
         }
-    }static LobbyPanel lobbyPanel
+    }
+    static GameObject lobbyPanel
     {
         get {
-            return JuloFind.singleton<LobbyPanel>();
+            return JuloFind.byName("LobbyPanel");
+        }
+    }
+    static GameObject onlinePanel {
+        get {
+            return JuloFind.byName("OnlinePanel");
         }
     }
 
@@ -66,10 +72,15 @@ public class EditorMagics : MonoBehaviour {
     [MenuItem("Magia/Play")]
     static void SwitchToStartMode()
     {
-        menu.gameObject.SetActive(true);
-        gamePanel.gameObject.SetActive(false);
-        lobbyPanel.gameObject.SetActive(false);
+        mainMenu.SetActive(true);
+        lobbyPanel.SetActive(false);
+        onlinePanel.SetActive(false);
 
+        DeleteMockPlayers();
+    }
+
+    static void DeleteMockPlayers()
+    {
         Transform list = playerList.playerContainer.transform;
 
         bool found = true;
@@ -89,10 +100,15 @@ public class EditorMagics : MonoBehaviour {
     [MenuItem("Magia/Lobby design")]
     static void SwitchToLobbyMode()
     {
-        menu.gameObject.SetActive(false);
-        gamePanel.gameObject.SetActive(true);
-        lobbyPanel.gameObject.SetActive(true);
+        mainMenu.SetActive(false);
+        lobbyPanel.SetActive(true);
+        onlinePanel.SetActive(false);
 
+        CreateMockPlayers();
+    }
+
+    static void CreateMockPlayers()
+    {
         //GameObject playerPrefab = 
         //GameObject wildcardPrefab = (GameObject)Resources.Load("Prefabs/Wildcard", typeof(GameObject));
 
@@ -108,6 +124,15 @@ public class EditorMagics : MonoBehaviour {
             newPlayer("Eze", Color.red, "o.o");
             newPlayer("Nano", Color.magenta, "o.o");
         }
+    }
+
+    [MenuItem("Magia/Online mode")]
+    static void SwitchToOnlineMode()
+    {
+        mainMenu.SetActive(false);
+        onlinePanel.SetActive(true);
+
+        DeleteMockPlayers();
     }
 
     static void newPlayer(string name, Color color, string role)

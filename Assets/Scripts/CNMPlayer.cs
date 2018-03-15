@@ -130,7 +130,7 @@ namespace Julo.CNMProto
         private IEnumerator HandleTurn()
         {
             // TODO select with unit has the turn
-            int unitNumber = 0;
+            //int unitNumber = 0;
 
             // TODO units should be cached in client?
             List<Unit> units = JuloFind.allWithComponent<Unit>();

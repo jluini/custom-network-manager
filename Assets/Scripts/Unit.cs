@@ -17,7 +17,7 @@ namespace Julo.CNMProto
 
         [Header("Hooks")]
 
-        public SpriteRenderer renderer;
+        public new SpriteRenderer renderer;
 
         public override void OnStartClient()
         {

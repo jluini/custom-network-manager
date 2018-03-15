@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Networking;
+using UnityEngine.Networking.Match;
 
 using Julo.Util;
 
@@ -52,7 +53,8 @@ namespace Julo.Network
 
         /************* DUAL METHODS *************/
 
-        public bool StartAsHost(SceneData initialScene)
+
+        public bool StartAsHost(SceneData initialScene, MatchInfo hostInfo = null)
         {
             if(state != DNMState.Off)
             {
@@ -65,7 +67,11 @@ namespace Julo.Network
 
             playerMap = new Dictionary<int, PlayerWrapper>();
                 
-            NetworkClient localClient = StartHost();
+            NetworkClient localClient;
+            if(hostInfo == null)
+                localClient = StartHost();
+            else
+                localClient = StartHost(hostInfo);
 
             bool hostStarted = localClient != null;
 
@@ -95,7 +101,7 @@ namespace Julo.Network
             return hostStarted;
         }
 
-        public void StartAsClient()
+        public void StartAsClient(MatchInfo hostInfo = null)
         {
             if(state != DNMState.Off)
             {
@@ -105,7 +111,11 @@ namespace Julo.Network
 
             state = DNMState.Connecting;
             SetServerInfo("Connecting", "");
-            StartClient();
+
+            if(hostInfo != null)
+                StartClient(hostInfo);
+            else
+                StartClient();
         }
 
         // called on server to add already created local players
@@ -354,7 +364,8 @@ namespace Julo.Network
         // call on server when a client just connected
         public override void OnServerConnect(NetworkConnection connectionToClient)
         {
-            Debug.LogFormat("Connecting client {0} / {1}", state, gameState);
+            //Debug.LogFormat("Connecting client {0} / {1}", state, gameState);
+            //Debug.Log("OnServerConnect");
         }
 
         
