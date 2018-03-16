@@ -99,13 +99,14 @@ namespace Julo.CNMProto
         [Command]
         public void CmdSendChat(string message)
         {
-            RpcNewChatMessage(string.Format("<<b>{0}</b> says>: {1}", playerName, message));
+            RpcNewChatMessage(message);
         }
 
         [ClientRpc]
         public void RpcNewChatMessage(string message)
         {
-            CNManager.Instance.OnClientNewMessage(message);
+            ChatMessage chatMessage = new ChatMessage(this, message);
+            CNManager.Instance.OnClientNewMessage(chatMessage);
         }
 
         [ClientRpc]
@@ -213,7 +214,7 @@ namespace Julo.CNMProto
             colorInput.interactable = isLocalPlayer;
 
             string roleText;
-            if(role < CNManager.Instance.maxPlayers)
+            if(role < CNManager.Instance.currentMaxPlayers)
             {
                 roleText = "p" + (role + 1);
             }

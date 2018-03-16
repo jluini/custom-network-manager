@@ -74,9 +74,8 @@ namespace Julo.CNMProto
 
         [Header("Lobby")]
         public PlayerList playerList;
-
         [Header("Chat")]
-        public Text chatContent;
+        public ChatManager chatManager;
         public InputField chatInput;
 
         [Header("Icons")]
@@ -87,6 +86,7 @@ namespace Julo.CNMProto
         public Sprite cpuIcon;
 
         // internal
+        bool isPlaying = false;
 
         private string gameName = "New game";
         private Dictionary<UnityEngine.Networking.Types.NetworkID, MatchInfoSnapshot> matchDict;
@@ -111,7 +111,6 @@ namespace Julo.CNMProto
         // server
         bool gameOver;
         int currentPlayer;
-        //bool isPlaying = false;
         List<Unit> units;
         int[] numberOfUnitsPerPlayer;
         NetworkConnection lastOwningConnection;
@@ -130,7 +129,8 @@ namespace Julo.CNMProto
 
         public void SendChat()
         {
-            if(IsClientConnected() && mainPlayer != null) {
+            if(IsClientConnected() && mainPlayer != null)
+            {
                 ((CNMPlayer)mainPlayer).CmdSendChat(chatInput.text);
                 chatInput.text = "";
             }
@@ -356,15 +356,14 @@ namespace Julo.CNMProto
 
             if(TryToStartGame())
             {
-                //isPlaying = true;
                 units = new List<Unit>();
                 numberOfUnitsPerPlayer = new int[currentMaxPlayers];
             }
         }
 
-        public void OnClientNewMessage(string message)
+        public void OnClientNewMessage(ChatMessage message)
         {
-            chatContent.text = chatContent.text + message + "\n";
+            chatManager.NewMessage(message);
         }
         
         /********** UI **********/
@@ -374,14 +373,6 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(false);
 
             panelManager.OpenPanel(mainMenuPanel);
-
-            /*
-            mainMenuPanel.Show();
-            lobbyPanel.Hide();
-            gamePanel.Hide();
-            connectingPanel.Hide();
-            onlinePanel.Hide();
-            */
         }
 
         private void SwitchToLobbyMode()
@@ -392,7 +383,10 @@ namespace Julo.CNMProto
             panelManager.OpenPanel(lobbyPanel);
 
             joinAsSpectatorToggle.interactable = NetworkServer.active;
-            playButton.interactable = NetworkServer.active;
+
+            playButton.interactable = false;
+            if(NetworkServer.active)
+                UpdatePlayButton();
         }
 
         private void SwitchToOnlineMode()
@@ -474,20 +468,34 @@ namespace Julo.CNMProto
         public override void OnPlayerAdded(DualGamePlayer newPlayer)
         {
             playerList.OnPlayerAdded(newPlayer);
+            if(NetworkServer.active && !isPlaying)
+                UpdatePlayButton();
         }
         public override void OnPlayerRemoved(DualGamePlayer player)
         {
             playerList.OnPlayerRemoved(player);
+            if(NetworkServer.active && !isPlaying)
+                UpdatePlayButton();
         }
         public override void OnRoleChanged(DualGamePlayer player, int oldRole)
         {
             playerList.OnRoleChanged(player, oldRole);
+            if(NetworkServer.active && !isPlaying)
+                UpdatePlayButton();
         }
         public override void OnRoomSizeChanged(int minPlayers, int maxPlayers)
         {
             playerList.OnRoomSizeChanged(minPlayers, maxPlayers);
+            if(NetworkServer.active && !isPlaying)
+                UpdatePlayButton();
         }
-        
+
+        private void UpdatePlayButton()
+        {
+            //Debug.Log("Updated with " + );
+            playButton.interactable = ThereIsEnoughPlayers();
+        }
+
         protected override DualGamePlayer CreatePlayer(int connectionId, short playerControllerId)
         {
             bool isLocal = (connectionId == 0);
@@ -614,8 +622,12 @@ namespace Julo.CNMProto
         public override void OnClientSceneChanged(NetworkConnection conn)
         {
             base.OnClientSceneChanged(conn);
-            gameOptions.Hide();
+            isPlaying = true;
+            //gameOptions.Hide();
+            chatManager.StartCleaning();
             lobbyPanel.animator.SetBool(isPlayingParameterId, true);
+
+            LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());
         }
         
         /************* Misc *************/

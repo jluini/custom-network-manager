@@ -123,7 +123,7 @@ RectTransform:
   - {fileID: 1853192419}
   - {fileID: 569682666}
   m_Father: {fileID: 624433375}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 51.9}
@@ -1800,7 +1800,7 @@ GameObject:
   - 114: {fileID: 461884448}
   - 114: {fileID: 461884447}
   m_Layer: 5
-  m_Name: GameOptions
+  m_Name: Game
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2148,7 +2148,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &540675022
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2364,8 +2364,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_Children:
   - {fileID: 540675022}
-  - {fileID: 648080262}
   - {fileID: 8793410}
+  - {fileID: 648080262}
   - {fileID: 1408511186}
   m_Father: {fileID: 892673173}
   m_RootOrder: 0
@@ -2406,7 +2406,7 @@ RectTransform:
   - {fileID: 461884450}
   - {fileID: 952790062}
   m_Father: {fileID: 624433375}
-  m_RootOrder: 1
+  m_RootOrder: 2
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
@@ -2865,7 +2865,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 290}
+  m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &821747408
 MonoBehaviour:
@@ -3022,6 +3022,7 @@ GameObject:
   - 114: {fileID: 892673174}
   - 114: {fileID: 892673169}
   - 114: {fileID: 892673175}
+  - 114: {fileID: 892673176}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -3193,16 +3194,14 @@ MonoBehaviour:
   matchSize: 4
   isNetworkActive: 0
   matchMaker: {fileID: 0}
-  minPlayers: 2
-  maxPlayers: 2
   mainPlayer: {fileID: 0}
   joinAsSpectator: 0
   debugEnabled: 0
   statusInfo: {fileID: 1124830504}
   hostInfo: {fileID: 1062809516}
   currentSceneName: 
-  currentMinPlayers: 0
-  currentMaxPlayers: 0
+  currentMinPlayers: 2
+  currentMaxPlayers: 2
   currentSize: 0
   currentScene:
     assetName: 
@@ -3219,7 +3218,7 @@ MonoBehaviour:
     englishName: Island
     spanishName: Isla
     minPlayers: 2
-    maxPlayers: 3
+    maxPlayers: 2
     minSize: 1
     maxSize: 3
     defaultSize: 1
@@ -3270,7 +3269,7 @@ MonoBehaviour:
   gameOptions: {fileID: 461884447}
   serverOptions: {fileID: 1010755786}
   playerList: {fileID: 951013296}
-  chatContent: {fileID: 202707878}
+  chatManager: {fileID: 892673176}
   chatInput: {fileID: 1633410184}
   nullIcon: {fileID: 21300000, guid: 158e9405c823f1745999842171aa9c55, type: 3}
   remoteIcon: {fileID: 21300000, guid: ebfe0765fb0d96e46bffc2f90993526b, type: 3}
@@ -3289,6 +3288,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   initiallyOpen: {fileID: 540675025}
+--- !u!114 &892673176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 892673168}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ec10fc06629f5468443ff71a631a3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chatContent: {fileID: 202707878}
 --- !u!1 &912226617
 GameObject:
   m_ObjectHideFlags: 0
@@ -7894,7 +7905,7 @@ Prefab:
     - target: {fileID: 224000013917571184, guid: 21c8966237212bf499523252ccc736fa,
         type: 2}
       propertyPath: m_AnchoredPosition.y
-      value: -145
+      value: -25
       objectReference: {fileID: 0}
     - target: {fileID: 224000013917571184, guid: 21c8966237212bf499523252ccc736fa,
         type: 2}
@@ -8348,7 +8359,7 @@ MonoBehaviour:
     m_HighlightedTrigger: Highlighted
     m_PressedTrigger: Pressed
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 2000266227}
   m_OnClick:
     m_PersistentCalls:

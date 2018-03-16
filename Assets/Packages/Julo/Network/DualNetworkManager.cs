@@ -17,8 +17,8 @@ namespace Julo.Network
         [Header("DualNetworkManager")]
 
         // TODO remove
-        public int minPlayers = 2;
-        public int maxPlayers = 3;
+        //public int minPlayers = 2;
+        //public int maxPlayers = 3;
 
         public DualGamePlayer mainPlayer = null;
         public bool joinAsSpectator = false;
@@ -165,6 +165,42 @@ namespace Julo.Network
             }
         }
 
+        public bool ThereIsEnoughPlayers()
+        {
+            if(state != DNMState.Host)
+            {
+                Debug.LogError("Invalid state");
+                return false;
+            }
+            if(gameState != GameState.NoGame)
+            {
+                Debug.LogError("Invalid state");
+                return false;
+            }
+
+            int numPlayers = 0;
+
+            for(int i = 0; i < currentMaxPlayers; i++)
+            {
+                if(playerMap.ContainsKey(i))
+                {
+                    PlayerWrapper wrapper = playerMap[i];
+                    if(wrapper != null && wrapper.player != null/* && wrapper.player.role == i*/)
+                    {
+                        numPlayers++;
+                    }
+                    else
+                    {
+                        Debug.LogErrorFormat("Invalid player: {0}.({1})({2})({3})", i, wrapper != null, wrapper.player != null, wrapper.player.role);
+                    }
+                }
+            }
+
+            bool ret = numPlayers >= currentMinPlayers;
+
+            return ret;
+        }
+
         public bool TryToStartGame()
         {
             if(state != DNMState.Host)
@@ -247,7 +283,7 @@ namespace Julo.Network
             {
                 Debug.LogWarning("Cannot up");
             }
-            else if(role - 1 < maxPlayers)
+            else if(role - 1 < currentMaxPlayers)
             {
                 if(playerMap.ContainsKey(role - 1))
                 {
@@ -261,7 +297,7 @@ namespace Julo.Network
             else
             {
                 bool done = false;
-                for(int i = role - 1; i >= maxPlayers; i--)
+                for(int i = role - 1; i >= currentMaxPlayers; i--)
                 {
                     if(playerMap.ContainsKey(i))
                     {
@@ -273,13 +309,13 @@ namespace Julo.Network
 
                 if(!done)
                 {
-                    if(playerMap.ContainsKey(maxPlayers - 1))
+                    if(playerMap.ContainsKey(currentMaxPlayers - 1))
                     {
-                        SwitchRoles(role, maxPlayers - 1);
+                        SwitchRoles(role, currentMaxPlayers - 1);
                     }
                     else
                     {
-                        ChangeRole(role, maxPlayers - 1);
+                        ChangeRole(role, currentMaxPlayers - 1);
                     }
                 }
             }
@@ -293,7 +329,7 @@ namespace Julo.Network
 
             int role = player.role;
 
-            if(role + 1 < maxPlayers)
+            if(role + 1 < currentMaxPlayers)
             {
                 if(playerMap.ContainsKey(role + 1))
                 {
@@ -485,11 +521,12 @@ namespace Julo.Network
             if(extraMessage != null)
             {
                 var s = extraMessage.ReadMessage<NewPlayerMessage>();
-                Debug.Log("Name is " + s.playerName);
                 playerName = s.playerName;
             }
-
-            //JuloDebug.Log(string.Format("OnSeverAddPlayer({0}, {1})", connectionToClient.connectionId, playerControllerId)); 
+            else
+            {
+                Debug.LogWarning("Mo message");
+            }
 
             if(state != DNMState.Host)
             {
@@ -543,7 +580,7 @@ namespace Julo.Network
                     bool assigned = false;
                     
                     // try to enter as player
-                    for(int i = 0; !assigned && i < maxPlayers; i++)
+                    for(int i = 0; !assigned && i < currentMaxPlayers; i++)
                     {
                         if(!playerMap.ContainsKey(i))
                         {
@@ -625,8 +662,6 @@ namespace Julo.Network
                 }
 
                 OnClientConnected(true);
-
-                Debug.Log("READY LOCAL: " + connectionToServer.isReady);
             }
             else
             {
@@ -742,9 +777,9 @@ namespace Julo.Network
                 PlayerWrapper playerWrap = playerMap[oldRole];
                 playerMap.Remove(oldRole);
 
-                playerWrap.player.role = newRole;
-
                 playerMap.Add(newRole, playerWrap);
+
+                playerWrap.player.role = newRole;
             }
         }
 
@@ -756,11 +791,11 @@ namespace Julo.Network
             playerMap.Remove(role1);
             playerMap.Remove(role2);
 
-            player1.player.role = role2;
-            player2.player.role = role1;
-
             playerMap.Add(role2, player1);
             playerMap.Add(role1, player2);
+
+            player1.player.role = role2;
+            player2.player.role = role1;
         }
 
         // called in server to start the game spawning the initial units

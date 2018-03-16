@@ -37,8 +37,8 @@ namespace Julo.CNMProto
 
         void initialize()
         {
-            minPlayers = CNManager.Instance.minPlayers;
-            maxPlayers = CNManager.Instance.maxPlayers;
+            minPlayers = CNManager.Instance.currentMinPlayers;
+            maxPlayers = CNManager.Instance.currentMaxPlayers;
 
             int childCount = playerContainer.childCount;
 
