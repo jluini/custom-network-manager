@@ -11,11 +11,12 @@ public class PanelManager : MonoBehaviour {
     public Panel initiallyOpen;
 
     protected Panel current;
-    private int isOpenParameterId;
 
     private GameObject previouslySelected;
 
     private const string isOpenParameterName = "IsOpen";
+    private int isOpenParameterId;
+
     private const string openStateName = "Open";
     private const string closedStateName = "Closed";
 

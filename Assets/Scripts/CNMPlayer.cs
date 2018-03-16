@@ -25,9 +25,6 @@ namespace Julo.CNMProto
         [SyncVar]
         public PlayerType playerType;
 
-        [SyncVar(hook="OnNameChanged")]
-        public string playerName;
-
         [SyncVar(hook="OnColorChanged")]
         public ushort playerColorNum;
 
@@ -77,12 +74,6 @@ namespace Julo.CNMProto
             {
                 Draw();
             }
-        }
-
-        private void OnNameChanged(string newPlayerName)
-        {
-            playerName = newPlayerName;
-            Draw();
         }
 
         private void OnColorChanged(ushort newColorNum)

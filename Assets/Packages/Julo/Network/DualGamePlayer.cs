@@ -21,6 +21,9 @@ namespace Julo.Network
         [SyncVar(hook="OnRoleChanged")]
         public int role= -1;
 
+        [SyncVar(hook="OnNameChanged")]
+        public string playerName;
+
         private DualNetworkManager manager {
             get {
                 return (DualNetworkManager)NetworkManager.singleton;
@@ -69,6 +72,12 @@ namespace Julo.Network
                 // Debug.LogWarning("Not spawned");
             }
 
+            OnPlayerChanged();
+        }
+
+        private void OnNameChanged(string newPlayerName)
+        {
+            playerName = newPlayerName;
             OnPlayerChanged();
         }
 

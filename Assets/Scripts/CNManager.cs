@@ -8,9 +8,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.Networking;
 using UnityEngine.Networking.Match;
 
-//#if UNITY_EDITOR
-//using UnityEditor;
-//#endif
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 using UnityEngine.SceneManagement;
 
@@ -52,12 +52,15 @@ namespace Julo.CNMProto
         public Panel lobbyPanel;
         public Panel onlinePanel;
         public Panel connectingPanel;
+        private const string isPlayingParameterName = "IsPlaying";
+        private int isPlayingParameterId;
 
         [Header("Online")]
         public InputField yourName;
-        public Transform matchList;
+        public Transform matchContainer;
         public InputField newMatchName;
 
+        public GameObject creatingDisplay;
         public GameObject findingDisplay;
         public GameObject noMatchesNotice;
         public GameObject errorFindingNotice;
@@ -85,8 +88,25 @@ namespace Julo.CNMProto
 
         // internal
 
+        private string gameName = "New game";
+        private Dictionary<UnityEngine.Networking.Types.NetworkID, MatchInfoSnapshot> matchDict;
+
         private delegate void BackButtonDelegate();
         private BackButtonDelegate backDelegate = null;
+
+        /********/
+
+        public void OnOnlinePlayerNameChanged(string newName)
+        {
+            mainPlayerModel.playerName = newName;
+        }
+
+        protected override string GetPlayerName()
+        {
+            return mainPlayerModel.playerName;
+        }
+
+        /********/
 
         // server
         bool gameOver;
@@ -103,6 +123,8 @@ namespace Julo.CNMProto
         {
             SetServerInfo("Off", "");
             backButton.gameObject.SetActive(false);
+
+            isPlayingParameterId = Animator.StringToHash(isPlayingParameterName);
         }
 
 
@@ -136,14 +158,15 @@ namespace Julo.CNMProto
         public void OnClickPlayOnline()
         {
             SwitchToOnlineMode();
-
+            newMatchName.text = gameName;
         }
 
         public void OnClickNewMatch()
         {
-            string gameName = newMatchName.text;
-            if(gameName == "")
+            if(newMatchName.text == "")
                 return;
+
+            gameName = newMatchName.text;
                 
             if(matchMaker == null)
             {
@@ -154,6 +177,7 @@ namespace Julo.CNMProto
             if(matchMaker != null)
             {
                 matchMaker.CreateMatch(gameName, 16, true, "", "", "", 0, 0, OnInternetMatchCreate);
+                creatingDisplay.SetActive(true);
             }
             else
             {
@@ -174,7 +198,7 @@ namespace Julo.CNMProto
 
         private void OnInternetMatchCreate(bool success, string extendedInfo, MatchInfo matchInfo)
         {
-            // TODO
+            creatingDisplay.SetActive(false);
 
             if(success)
             {
@@ -194,24 +218,37 @@ namespace Julo.CNMProto
 
         }
 
-        //private string matchName = "New game";
-
-        private void OnInternetMatchList(bool success, string extendedInfo, List<MatchInfoSnapshot> matches)
+        private void OnInternetMatchList(bool success, string extendedInfo, List<MatchInfoSnapshot> matchList)
         {
             findingDisplay.SetActive(false);
             if(success)
             {
                 errorFindingNotice.SetActive(false);
 
-                if(matches.Count != 0)
+                if(matchDict == null)
+                    matchDict = new Dictionary<UnityEngine.Networking.Types.NetworkID, MatchInfoSnapshot>();
+                else
+                    matchDict.Clear();
+
+                int numChilds = matchContainer.transform.childCount;
+
+                for(int i = 0; i < numChilds; i++)
+                {
+                    Transform child = matchContainer.transform.GetChild(i);
+                    if(child.GetComponent<MatchDisplay>() != null)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
+
+                if(matchList.Count != 0)
                 {
                     //
                     noMatchesNotice.SetActive(false);
 
-                    int i = 0;
-                    foreach(MatchInfoSnapshot match in matches)
+                    foreach(MatchInfoSnapshot match in matchList)
                     {
-                        Debug.LogFormat("{0}. {1}", i, match.name);
+                        matchDict.Add(match.networkId, match);
 
                         GameObject newMatchObj;
                         //#if UNITY_EDITOR
@@ -221,13 +258,10 @@ namespace Julo.CNMProto
                         //#endif
 
                         MatchDisplay matchDisplay = newMatchObj.GetComponent<MatchDisplay>();
-                        matchDisplay.DisplayMatch(match, OnInternetMatchJoin);
+                        matchDisplay.DisplayMatch(match, OnMatchJoinClicked(match.networkId));
 
-                        matchDisplay.transform.SetParent(matchList, false);
+                        matchDisplay.transform.SetParent(matchContainer, false);
                     }
-
-
-                    // matchMaker.JoinMatch(matches[matches.Count - 1].networkId, "", "", "", 0, 0, OnInternetMatchJoin);
                 }
                 else
                 {
@@ -241,11 +275,25 @@ namespace Julo.CNMProto
             }
         }
 
+        public delegate void OnClickMatchJoin();
+
+        private OnClickMatchJoin OnMatchJoinClicked(UnityEngine.Networking.Types.NetworkID matchId)
+        {
+            return new OnClickMatchJoin(() => JoinToMatch(matchId));
+        }
+
+        private void JoinToMatch(UnityEngine.Networking.Types.NetworkID matchId)
+        {
+            matchMaker.JoinMatch(matchId, "", "", "", 0, 0, OnInternetMatchJoin);
+        }
+
         private void OnInternetMatchJoin(bool success, string extendedInfo, MatchInfo matchInfo)
         {
             if(success)
             {
-                Debug.Log("Able to join a match");
+                MatchInfoSnapshot match = matchDict[matchInfo.networkId];
+                gameName = match.name;
+                Debug.LogFormat("Able to join match {0}", match.name);
                 StartAsClient(matchInfo);
             }
             else
@@ -343,15 +391,6 @@ namespace Julo.CNMProto
 
             panelManager.OpenPanel(lobbyPanel);
 
-            /*
-            mainMenuPanel.Hide();
-            lobbyPanel.Show();
-            gamePanel.Show();
-            connectingPanel.Hide();
-            onlinePanel.Hide();
-            */
-
-            // TODO
             joinAsSpectatorToggle.interactable = NetworkServer.active;
             playButton.interactable = NetworkServer.active;
         }
@@ -362,12 +401,8 @@ namespace Julo.CNMProto
             backDelegate = this.SwitchToMenuMode;
 
             panelManager.OpenPanel(onlinePanel);
-            /*
-            mainMenuPanel.Hide();
-            gamePanel.Hide();
-            lobbyPanel.Hide();
-            onlinePanel.Show();
-            */
+
+            yourName.text = mainPlayerModel.playerName;
         }
 
         private void SwitchToConnectingMode()
@@ -426,10 +461,10 @@ namespace Julo.CNMProto
             SwitchToLobbyMode();
             //connectingNotice.Hide();
 
-            title.text = matchName;
-            Debug.LogFormat("Starting game with name '{0}'", matchName);
+            title.text = gameName;
+            //Debug.LogFormat("Starting game with name '{0}'", gameName);
         }
-        
+
         protected override void OnClientDisconnected()
         {
             Debug.Log("OnClientDisconnected");
@@ -480,13 +515,13 @@ namespace Julo.CNMProto
             }
             
             GameObject newUnitObj;
-            //#if UNITY_EDITOR
-            //newUnitObj = PrefabUtility.InstantiatePrefab(unitPrefab) as GameObject;
-            //newUnitObj.transform.position = location.position;
-            //newUnitObj.transform.rotation = location.rotation;
-            //#else
+            #if UNITY_EDITOR
+            newUnitObj = PrefabUtility.InstantiatePrefab(unitPrefab) as GameObject;
+            newUnitObj.transform.position = location.position;
+            newUnitObj.transform.rotation = location.rotation;
+            #else
             newUnitObj = Instantiate(unitPrefab, location.position, location.rotation) as GameObject;
-            //#endif
+            #endif
             
             Unit newUnit = newUnitObj.GetComponent<Unit>();
             
@@ -561,12 +596,9 @@ namespace Julo.CNMProto
 
             int numAliveTeams = 0;
 
-            //Debug.Log("TOTAL = " + units.Count);
-
             foreach(Unit unit in units)
             {
                 int role = unit.playerRole;
-                //Debug.Log("One of player " + role);
                 if(numberOfUnitsPerPlayer[role] == 0)
                 {
                     numAliveTeams++;
@@ -583,6 +615,7 @@ namespace Julo.CNMProto
         {
             base.OnClientSceneChanged(conn);
             gameOptions.Hide();
+            lobbyPanel.animator.SetBool(isPlayingParameterId, true);
         }
         
         /************* Misc *************/

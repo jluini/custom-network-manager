@@ -143,14 +143,14 @@ public class EditorMagics : MonoBehaviour {
         newPlayer.nameInput.text = name;
         newPlayer.coloredImage.color = color;
         newPlayer.roleDisplay.text = role;
-        newPlayer.transform.SetParent(list);
+        newPlayer.transform.SetParent(list, false);
     }
     static void newWildcard()
 
     {
         // Instantiate(wildcardPrefab, Vector3.zero, Quaternion.identity) as GameObject;
         GameObject newWildcard = PrefabUtility.InstantiatePrefab(wildcardPrefab) as GameObject; 
-        newWildcard.transform.SetParent(list);
+        newWildcard.transform.SetParent(list, false);
     }
 
 

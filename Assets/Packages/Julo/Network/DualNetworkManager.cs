@@ -28,8 +28,8 @@ namespace Julo.Network
         public Text statusInfo;
         public Text hostInfo;
 
-        private enum DNMState { Off, Host, Connecting, Client }
-        private DNMState state = DNMState.Off;
+        protected enum DNMState { Off, Host, Connecting, Client }
+        protected DNMState state = DNMState.Off;
         private List<DualGamePlayer> cachedLocalPlayers = new List<DualGamePlayer>();
 
         // TODO synchronize
@@ -50,6 +50,13 @@ namespace Julo.Network
 
         // TODO is necessary?
         private Dictionary<int, PlayerWrapper> gamePlayers;
+
+        private string mainPlayerName;
+
+        /*public void SetMainPlayerName(string newName)
+        {
+            mainPlayerName = newName;
+        }*/
 
         /************* DUAL METHODS *************/
 
@@ -78,6 +85,7 @@ namespace Julo.Network
             if(hostStarted)
             {
                 state = DNMState.Host;
+
                 if(gameState != GameState.NoGame)
                 {
                     Debug.LogWarning("Already in game mode");
@@ -340,9 +348,13 @@ namespace Julo.Network
         
         /********** MAIN CALLBACKS **********/
 
+        public override void OnStartHost()
+        {
+            //Debug.Log("OnStartHost");
+        }
         public override void OnStartClient(NetworkClient client)
         {
-            
+            //Debug.Log("OnStartClient");
         }
 
         public override void OnStopServer()
@@ -467,8 +479,16 @@ namespace Julo.Network
 
         // called on server when a client requests to add a player for it
         // TODO should receive a message with initial name/color
-        public override void OnServerAddPlayer(NetworkConnection connectionToClient, short playerControllerId)
+        public override void OnServerAddPlayer(NetworkConnection connectionToClient,  short playerControllerId, NetworkReader extraMessage)
         {
+            string playerName = "Guest";
+            if(extraMessage != null)
+            {
+                var s = extraMessage.ReadMessage<NewPlayerMessage>();
+                Debug.Log("Name is " + s.playerName);
+                playerName = s.playerName;
+            }
+
             //JuloDebug.Log(string.Format("OnSeverAddPlayer({0}, {1})", connectionToClient.connectionId, playerControllerId)); 
 
             if(state != DNMState.Host)
@@ -508,6 +528,7 @@ namespace Julo.Network
                 bool isPlaying = gameState != GameState.NoGame;
 
                 newPlayer = CreatePlayer(connectionToClient.connectionId, playerControllerId);
+                newPlayer.playerName = playerName;
 
                 int newRole = -1;
 
@@ -597,7 +618,10 @@ namespace Julo.Network
                 // add hosted players
                 for(int i = 0; i < cachedLocalPlayers.Count; i++)
                 {
-                    ClientScene.AddPlayer(connectionToServer, (short)i);
+                    NewPlayerMessage newPlayerMessage = new NewPlayerMessage();
+                    newPlayerMessage.playerName = cachedLocalPlayers[i].playerName;
+
+                    ClientScene.AddPlayer(connectionToServer, (short)i, newPlayerMessage);
                 }
 
                 OnClientConnected(true);
@@ -612,13 +636,23 @@ namespace Julo.Network
 
                 //ClientScene.Ready(connectionToServer); // TODO is ready ??
 
+                NewPlayerMessage newPlayerMessage = new NewPlayerMessage();
+                newPlayerMessage.playerName = GetPlayerName();
+
                 // ask the server to add player for this remote client
-                ClientScene.AddPlayer(connectionToServer, 0);
+                ClientScene.AddPlayer(connectionToServer, 0, newPlayerMessage);
 
                 OnClientConnected(false);
             }
         }
 
+        /***/
+        protected virtual string GetPlayerName() 
+        {
+            return "Player";
+        }
+
+        /***/
         // called on client when it disconnects from server
         public override void OnClientDisconnect(NetworkConnection connectionToServer)
         {
