@@ -38,7 +38,7 @@ namespace Julo.CNMProto
         public override void OnNetworkDestroy()
         {
             base.OnNetworkDestroy();
-            JuloDebug.Log(string.Format("Unit {0} is network destroyed", netId));
+            // JuloDebug.Log(string.Format("Unit {0} is network destroyed", netId));
         }
     }
 }

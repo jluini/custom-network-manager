@@ -248,20 +248,8 @@ namespace Julo.Network
                 gameState = GameState.LoadingGame;
                 SetServerInfo("Loading", "");
 
-                foreach(PlayerWrapper wrapper in gamePlayers.Values)
-                {
-                    NetworkConnection conn = NetworkServer.connections[wrapper.connectionId];
-                    Debug.LogFormat("{0}: {1}", wrapper.player.role, conn.isReady);
-                }
-
                 // this sets all clients as not-ready
                 ServerChangeScene(currentScene.assetName);
-
-                foreach(PlayerWrapper wrapper in gamePlayers.Values)
-                {
-                    NetworkConnection conn = NetworkServer.connections[wrapper.connectionId];
-                    Debug.LogFormat("{0}: {1}", wrapper.player.role, conn.isReady);
-                }
 
                 return true;
             }
@@ -459,7 +447,7 @@ namespace Julo.Network
         // called on server when a client is ready
         public override void OnServerReady(NetworkConnection connectionToClient)
         {
-            JuloDebug.Log(string.Format("OnServerReady {0} / {1}", state, gameState));
+            // JuloDebug.Log(string.Format("OnServerReady {0} / {1}", state, gameState));
 
             if(state != DNMState.Host)
             {
@@ -489,7 +477,7 @@ namespace Julo.Network
                     //Debug.LogFormat("{0} is {1} ready", conn.connectionId, isReady ? "" : "NOT");
                 }
                 
-                JuloDebug.Log(string.Format("OnServerReady ({0}/{1} ready)", numReady, numTotal));
+                //JuloDebug.Log(string.Format("OnServerReady ({0}/{1} ready)", numReady, numTotal));
                 
                 // TODO only actual players should be required to be ready
                 if(numReady == numTotal)
@@ -627,7 +615,7 @@ namespace Julo.Network
 
         public override void OnServerSceneChanged(string sceneName)
         {
-            JuloDebug.Log("On server scene changed: waiting for clients to be ready");
+            //JuloDebug.Log("On server scene changed: waiting for clients to be ready");
             //base.OnServerSceneChanged(sceneName);
 
             if(state != DNMState.Host) { Debug.LogError("Invalid state"); return; }
@@ -697,7 +685,7 @@ namespace Julo.Network
 
         public override void OnClientSceneChanged(NetworkConnection connectionToServer)
         {
-            JuloDebug.Log("On client scene changed");
+            //JuloDebug.Log("On client scene changed");
             //base.OnClientSceneChanged(conn);
 
             if(ClientScene.ready)

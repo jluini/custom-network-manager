@@ -171,7 +171,7 @@ namespace Julo.CNMProto
                 yield return new WaitForSeconds(1.5f);
             }
 
-            JuloDebug.Log("Turn is over");
+            //JuloDebug.Log("Turn is over");
 
             CmdEndTurn();
 

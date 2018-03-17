@@ -1,6 +1,9 @@
 ﻿
+using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -99,7 +102,55 @@ namespace Julo.CNMProto
         public void OnOnlinePlayerNameChanged(string newName)
         {
             mainPlayerModel.playerName = newName;
+            SaveData();
         }
+
+        /*******/
+
+        private void SaveData()
+        {
+            string destination = DataFilePath();
+            FileStream fileStream;
+
+            if(File.Exists(destination))
+                fileStream = File.OpenWrite(destination);
+            else
+                fileStream = File.Create(destination);
+
+            GameData data = new GameData(mainPlayerModel.playerName);
+
+            BinaryFormatter bf = new BinaryFormatter();
+
+            bf.Serialize(fileStream, data);
+            fileStream.Close();
+        }
+
+        private void LoadData()
+        {
+            string destination = DataFilePath();
+            FileStream fileStream;
+
+            if(!File.Exists(destination))
+            {
+                return;
+            }
+            fileStream = File.OpenRead(destination);
+
+            BinaryFormatter bf = new BinaryFormatter();
+            GameData data = (GameData)bf.Deserialize(fileStream);
+            fileStream.Close();
+
+            mainPlayerModel.playerName = data.playerName;
+        }
+
+        private string DataFilePath()
+        {
+            return Application.persistentDataPath + "/save.dat";
+        }
+
+
+        /*******/
+
 
         protected override string GetPlayerName()
         {
@@ -124,6 +175,8 @@ namespace Julo.CNMProto
             backButton.gameObject.SetActive(false);
 
             isPlayingParameterId = Animator.StringToHash(isPlayingParameterName);
+
+            LoadData();
         }
 
 
@@ -571,13 +624,12 @@ namespace Julo.CNMProto
                     currentPlayer = (currentPlayer + 1) % currentMaxPlayers;
                 } while(numberOfUnitsPerPlayer[currentPlayer] == 0);
 
-                Debug.LogFormat("Is turn of {0}", currentPlayer);
+                //Debug.LogFormat("Is turn of {0}", currentPlayer);
 
                 DualGamePlayer current = GetPlayer(currentPlayer);
 
                 if(current.connectionToClient != lastOwningConnection)
                 {
-                    Debug.Log("Change authority");
                     foreach(Unit unit in units)
                     {
                         NetworkIdentity unitIdentity = unit.GetComponent<NetworkIdentity>();
@@ -627,9 +679,35 @@ namespace Julo.CNMProto
             chatManager.StartCleaning();
             lobbyPanel.animator.SetBool(isPlayingParameterId, true);
 
-            LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());
+            //LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());
+            StartCoroutine("RebuildLayout");
         }
-        
+
+        private const string playingStateName = "Playing";
+        private IEnumerator RebuildLayout()
+        {
+            Animator anim = lobbyPanel.animator;
+
+            bool finalStateReached = false;
+
+            while(!finalStateReached) //anim.IsInTransition(0))
+            {
+                Debug.Log("Rebuilding");
+                LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());
+                yield return new WaitForEndOfFrame();
+
+                if(!anim.IsInTransition(0))
+                {
+                    finalStateReached = anim.GetCurrentAnimatorStateInfo(0).IsName(playingStateName);
+                }
+            }
+
+            Debug.Log("Rebuilding");
+            LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());
+
+            yield break;
+        }
+
         /************* Misc *************/
 
         public Color GetColor(ushort index)

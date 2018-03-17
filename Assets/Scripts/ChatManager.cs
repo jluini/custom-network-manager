@@ -10,6 +10,7 @@ namespace Julo.CNMProto
 {
     public class ChatManager : MonoBehaviour
     {
+        public int maxMessages = 10;
         public float chatMemory = 7f;
         public float cleanInterval = 2f;
         public bool cleanMessages = false;
@@ -23,6 +24,10 @@ namespace Julo.CNMProto
         public void NewMessage(ChatMessage message)
         {
             lastMessages.Add(message);
+
+            if(lastMessages.Count > maxMessages)
+                lastMessages.RemoveAt(0);
+
             RedrawMessages();
             
             if(cleanMessages && !isCleaning)
@@ -94,11 +99,15 @@ namespace Julo.CNMProto
         {
             string name = message.emisor.playerName;
             string text = message.text;
+            Color color = CNManager.Instance.colors[message.emisor.playerColorNum];
             
-            builder.Append("<<b>");
+            builder.Append("<color=#");
+            builder.Append(ColorUtility.ToHtmlStringRGBA(color));
+            builder.Append("><<b>");
             AppendEscaped(builder, name);
             builder.Append("</b> says> ");
             AppendEscaped(builder, text);
+            builder.Append("</color>");
             builder.Append('\n');
         }
         

@@ -295,9 +295,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   role: -1
+  playerName: not set
   moveSpeed: 1.5
   playerType: 0
-  playerName: not set
   playerColorNum: 0
   debugging: 0
   iconImage: {fileID: 114000011721794988}
@@ -321,7 +321,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_IgnoreLayout: 0
   m_MinWidth: -1
-  m_MinHeight: 30
+  m_MinHeight: 40
   m_PreferredWidth: -1
   m_PreferredHeight: 40
   m_FlexibleWidth: -1
