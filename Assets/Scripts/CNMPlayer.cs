@@ -28,12 +28,9 @@ namespace Julo.CNMProto
         [SyncVar(hook="OnColorChanged")]
         public ushort playerColorNum;
 
-        public Color playerColor
+        public Color GetColor()
         {
-            get {
-                return CNManager.Instance.GetColor(playerColorNum);
-            }
-
+            return CNManager.Instance.GetColor(playerColorNum);
         }
 
         [Header("Debug")]
@@ -189,7 +186,7 @@ namespace Julo.CNMProto
         public void Draw()
         {
             string name = playerName;
-            Color color = playerColor;
+            Color color = GetColor();
 
             Sprite icon = CNManager.Instance.nullIcon;
             //if(!NetworkServer.active && isLocalPlayer || NetworkServer.active && ) {

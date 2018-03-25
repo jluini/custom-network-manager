@@ -1,10 +1,11 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-
+using Julo.Util;
 
 public class PanelManager : MonoBehaviour {
 
@@ -20,10 +21,20 @@ public class PanelManager : MonoBehaviour {
     private const string openStateName = "Open";
     private const string closedStateName = "Closed";
 
-    public void OnEnable()
+    //public void OnEnable()
+    private void Start()
     {
         //We cache the Hash to the "Open" Parameter, so we can feed to Animator.SetBool.
         isOpenParameterId = Animator.StringToHash(isOpenParameterName);
+
+        // hide all panels
+        foreach(Panel panel in JuloFind.allDescendants<Panel>(this))
+        {
+            if(panel.gameObject.activeSelf)
+            {
+                panel.gameObject.SetActive(false);
+            }
+        }
 
         if(initiallyOpen != null)
         {
@@ -37,6 +48,8 @@ public class PanelManager : MonoBehaviour {
         {
             return;
         }
+
+        Debug.Log("Opening panel " + panelToOpen);
 
         // activate this panel
         panelToOpen.gameObject.SetActive(true);

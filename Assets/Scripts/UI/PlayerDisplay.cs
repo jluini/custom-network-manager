@@ -43,7 +43,7 @@ namespace Julo.CNMProto
             {
                 isLocal = player.isLocalPlayer;
                 name = player.playerName;
-                color = player.playerColor;
+                color = player.GetColor();
 
                 if(isLocal)
                 {
@@ -67,10 +67,6 @@ namespace Julo.CNMProto
                     icon = CNManager.Instance.remoteIcon;
                 }
             }
-            else
-            {
-                //nameInput.interactable = false;
-            }
 
             nameInput.interactable = isLocal;
             nameInput.text = name;
@@ -87,8 +83,5 @@ namespace Julo.CNMProto
         {
             gameObject.SetActive(false);
         }
-
     }
-    
-    
 }

@@ -676,7 +676,7 @@ namespace Julo.CNMProto
             base.OnClientSceneChanged(conn);
             isPlaying = true;
             //gameOptions.Hide();
-            chatManager.StartCleaning();
+            //chatManager.StartCleaning();
             lobbyPanel.animator.SetBool(isPlayingParameterId, true);
 
             //LayoutRebuilder.MarkLayoutForRebuild(playerList.GetComponent<RectTransform>());

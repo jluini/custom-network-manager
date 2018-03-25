@@ -16,6 +16,7 @@ namespace Julo.CNMProto
         public bool cleanMessages = false;
 
         public Text chatContent;
+        public ScrollRect scroll;
 
         private List<ChatMessage> lastMessages = new List<ChatMessage>();
 
@@ -43,6 +44,13 @@ namespace Julo.CNMProto
             if(!isCleaning)
             {
                 isCleaning = true;
+
+                foreach(ChatMessage m in lastMessages)
+                {
+                    // refresh message time
+                    m.time = DateTime.Now;
+                }
+
                 StartCoroutine("CleanChat");
             }
         }
@@ -87,19 +95,35 @@ namespace Julo.CNMProto
         {
             StringBuilder builder = new StringBuilder();
 
+            bool isFirst = true;
             foreach(ChatMessage msg in lastMessages)
             {
+                if(!isFirst)
+                    builder.Append('\n');
                 AppendMessage(builder, msg);
+                isFirst = false;
             }
 
             chatContent.text = builder.ToString();
+            StartCoroutine("ScrollToBottomDelayed");
+        }
+
+        private IEnumerator ScrollToBottomDelayed()
+        {
+            // wait a frame
+            yield return null;
+
+            // scroll to bottom
+            scroll.normalizedPosition = new Vector2(0f, 0f);
+
+            yield break;
         }
 
         private void AppendMessage(StringBuilder builder, ChatMessage message)
         {
             string name = message.emisor.playerName;
             string text = message.text;
-            Color color = CNManager.Instance.colors[message.emisor.playerColorNum];
+            Color color = message.color;
             
             builder.Append("<color=#");
             builder.Append(ColorUtility.ToHtmlStringRGBA(color));
@@ -108,7 +132,6 @@ namespace Julo.CNMProto
             builder.Append("</b> says> ");
             AppendEscaped(builder, text);
             builder.Append("</color>");
-            builder.Append('\n');
         }
         
         public static void AppendEscaped(StringBuilder builder, string original)

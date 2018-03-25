@@ -16,12 +16,7 @@ namespace Julo.Network
     {
         [Header("DualNetworkManager")]
 
-        // TODO remove
-        //public int minPlayers = 2;
-        //public int maxPlayers = 3;
-
         public DualGamePlayer mainPlayer = null;
-        public bool joinAsSpectator = false;
 
         [Header("Debug Info")]
         public bool debugEnabled;
@@ -39,11 +34,13 @@ namespace Julo.Network
         public int currentSize;
 
         /*** SERVER ***/
+        [Header("Server")]
+        public bool joinAsSpectator = false;
+        [HideInInspector]
         public SceneData currentScene = null;
 
         private int maximumSpectatorRole = 100;
         private Dictionary<int, PlayerWrapper> playerMap;
-        //private numPlayers = 0;
 
         private enum GameState { NoGame, LoadingGame, Playing }
         private GameState gameState = GameState.NoGame;
@@ -53,13 +50,8 @@ namespace Julo.Network
 
         private string mainPlayerName;
 
-        /*public void SetMainPlayerName(string newName)
-        {
-            mainPlayerName = newName;
-        }*/
 
         /************* DUAL METHODS *************/
-
 
         public bool StartAsHost(SceneData initialScene, MatchInfo hostInfo = null)
         {
@@ -669,9 +661,9 @@ namespace Julo.Network
             }
         }
 
-        /***/
         protected virtual string GetPlayerName() 
         {
+            Debug.LogWarning("You should override this");
             return "Player";
         }
 
